@@ -4,7 +4,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget,
-    QVBoxLayout, QHBoxLayout, QPushButton,
+    QVBoxLayout, QGridLayout, QPushButton,
     QLineEdit, QLabel, QComboBox
 )
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -17,6 +17,7 @@ from matplotlib.figure import Figure
 # TODO: add a dict or list for wrecks so that i dont filter every time
 #           although this is already kinda done with self.wrecks
 # TODO: add logic to the filter dropdowns so that they only show relevant options i.e hierarchy for locations
+#           I think I may need to use one large dict for this, rather than several vars for the lists in load_lists()
 
 
 class ShipwreckMapCanvas(FigureCanvas):
@@ -52,7 +53,7 @@ class ShipwreckMapCanvas(FigureCanvas):
 
         # TODO: update logic to plot based off most accurate data
         # i.e. if coords, use, else if local, use that, else if ocean, use that
-        for name, lat, lon, id, year, mat_id, mat, local, ocean, country, prop_id, prop, sheath_id, sheath, fast_id, fast, purp_id, purp, type_id, type in wrecks:
+        for name, lat, lon, id, year, mat_id, mat, local, ocean, country, prop_id, prop, sheath_id, sheath, fast_id, fast, purp_id, purp, type_id, type, por2_id, por2, por4_id, por4, trad_id, trad, ctpye_id, ctype, con_id, con in wrecks:
             self.ax.plot(lon, lat, 'ro')
         #print(wrecks)  # Debugging line to check the wrecks being plotted 
 
@@ -74,7 +75,7 @@ class MainWindow(QMainWindow):
         # Controls
         #load the materials for the materials dropdown
         self.load_lists()
-        controls_layout = QHBoxLayout()
+        controls_layout = QGridLayout()
 
         self.year_input = QLineEdit()
         self.year_input.setPlaceholderText("Year filter FROM ")
@@ -82,79 +83,53 @@ class MainWindow(QMainWindow):
         self.year2_input = QLineEdit()
         self.year2_input.setPlaceholderText("Year filter TO (OPTIONAL)")
 
-        # TODO: this can be optimised when done with a loop. list the names i.e. materials, oceans, countries, local
-        # then each i represents one of the items. and each is slightly different based on i
-
-        self.material_input = QComboBox()
-        self.material_input.addItem("All Materials")  # Default option
-        for i in self.materials:
-            self.material_input.addItem(i[1]) # Add material names to the combo box
-        self.material_input.setPlaceholderText("Material filter")
-
-        self.ocean_input = QComboBox()
-        self.ocean_input.addItem("Oceans")  # Default option
-        for i in self.oceans:
-            self.ocean_input.addItem(i[1]) # Add ocean names to the combo box
-        self.ocean_input.setPlaceholderText("Ocean filter")
-
-        self.country_input = QComboBox()
-        self.country_input.addItem("Countries")  # Default option
-        for i in self.countries:
-            self.country_input.addItem(i[1]) # Add country names to the combo box
-        self.country_input.setPlaceholderText("Country filter")
-
-        self.local_input = QComboBox()
-        self.local_input.addItem("Locations")  # Default option
-        for i in self.local:
-            self.local_input.addItem(i[1]) # Add local names to the combo box
-        self.local_input.setPlaceholderText("Location filter")
-
-        self.sheathing_input = QComboBox()
-        self.sheathing_input.addItem("Sheathing")  # Default option
-        for i in self.sheathing:
-            self.sheathing_input.addItem(i[1])
-        self.sheathing_input.setPlaceholderText("Sheathing filter")
-
-        self.type_input = QComboBox()
-        self.type_input.addItem("Type")  # Default option
-        for i in self.type:
-            self.type_input.addItem(i[1])
-        self.type_input.setPlaceholderText("Type filter")
-
-        self.fastening_input = QComboBox()
-        self.fastening_input.addItem("Fastening")  # Default option
-        for i in self.fastening:
-            self.fastening_input.addItem(i[1])
-        self.fastening_input.setPlaceholderText("Fastening filter")
-
-        self.purpose_input = QComboBox()
-        self.purpose_input.addItem("Purpose")  # Default option
-        for i in self.purpose:
-            self.purpose_input.addItem(i[1])
-        self.purpose_input.setPlaceholderText("Purpose filter")
-
-        self.propulsion_input = QComboBox()
-        self.propulsion_input.addItem("Propulsion")
-        for i in self.propulsion:
-            self.propulsion_input.addItem(i[1])
-        self.propulsion_input.setPlaceholderText("Propulsion filter")
+        self.name_input = QLineEdit()
+        self.name_input.setPlaceholderText("Ship Name")
         
+        # list of inputs for the dropdowns
+        inputs = [
+            "materials", "coordinate_type", "confidence", "port2", "port4", "trade_routes", "oceans", "country",
+            "local", "sheathing", "type", "fastening", "purpose", "propulsion"
+        ]
+
+        # Dynamically generate dropdowns, rather than hardcoding each one
+        for i in inputs:
+            combo = QComboBox()
+            setattr(self, f"{i}_input", combo)
+            if i != "port2" and i != "port4":
+                combo.addItem(f"All {i.capitalize()}s")  # Default options
+                for item in getattr(self, f"{i}", []):
+                    combo.addItem(item[1])
+                combo.setPlaceholderText(f"{i.capitalize()} filter")
+            # port2 and port4 both come from one var, so they have special cases
+            elif i == "port2":
+                combo.addItem("Port Destination")
+                for item in self.ports:
+                    combo.addItem(item[1])
+                combo.setPlaceholderText("Port Destination filter")
+            else:
+                combo.addItem("Port Departed")
+                for item in self.ports:
+                    combo.addItem(item[1])
+                combo.setPlaceholderText("Port Departed filter")
+
         self.search_button = QPushButton("Search")
         self.search_button.clicked.connect(self.handle_search)
 
-        controls_layout.addWidget(QLabel("Filters:"))
-        controls_layout.addWidget(self.year_input)
-        controls_layout.addWidget(self.year2_input)
-        controls_layout.addWidget(self.material_input)
-        controls_layout.addWidget(self.propulsion_input)
-        controls_layout.addWidget(self.sheathing_input)
-        controls_layout.addWidget(self.fastening_input)
-        controls_layout.addWidget(self.purpose_input)
-        controls_layout.addWidget(self.type_input)
-        controls_layout.addWidget(self.ocean_input)
-        controls_layout.addWidget(self.country_input)
-        controls_layout.addWidget(self.local_input)
-        controls_layout.addWidget(self.search_button)
+        controls = [
+            QLabel("Filters"), self.year_input, self.year2_input, self.name_input,
+            self.materials_input, self.propulsion_input, self.sheathing_input,
+            self.fastening_input, self.purpose_input, self.type_input,
+            self.oceans_input, self.country_input, self.local_input,
+            self.port2_input, self.port4_input, self.trade_routes_input,
+            self.coordinate_type_input, self.confidence_input, self.search_button
+        ]
+
+        cols = 6
+        for i, widget in enumerate(controls):
+            row = i // cols
+            col = i % cols
+            controls_layout.addWidget(widget, row, col)
 
         main_layout.addLayout(controls_layout)
 
@@ -195,7 +170,17 @@ class MainWindow(QMainWindow):
                     builds.purpose_id,
                     purpose.reason,
                     builds.type_id,
-                    type.type_name
+                    type.type_name,
+                    voyage.port_to,
+                    ports_to.port_name AS port2_name,
+                    voyage.port_from,
+                    ports_from.port_name AS port4_name,
+                    voyage.trade_route,
+                    trade_routes.route_name,
+                    misc.coord_type,
+                    coord_type.coord_type,
+                    misc.confidence,
+                    confidence.confidence
                 FROM wrecks
                 LEFT JOIN builds ON wrecks.id = builds.build_id 
                 LEFT JOIN propulsion ON builds.propulsion_id = propulsion.propulsion_id
@@ -208,33 +193,36 @@ class MainWindow(QMainWindow):
                 LEFT JOIN local ON locations.local_id = local.local_id
                 LEFT JOIN oceans ON locations.ocean_id = oceans.ocean_id
                 LEFT JOIN countries ON locations.country_id = countries.country_id
+                LEFT JOIN voyage ON wrecks.id = voyage.ship_id
+                LEFT JOIN ports AS ports_to ON voyage.port_to = ports_to.id
+                LEFT JOIN ports AS ports_from ON voyage.port_from = ports_from.id
+                LEFT JOIN trade_routes ON voyage.trade_route = trade_routes.id
+                LEFT JOIN misc ON wrecks.id = misc.ship_id
+                LEFT JOIN coord_type ON misc.coord_type = coord_type.id
+                LEFT JOIN confidence ON misc.confidence = confidence.id
                 """)
         self.shipwrecks = c.fetchall()
 
     def load_lists(self):
         """ Load all the info needed for the lists """
+
         conn = sqlite3.connect("shipwrecks.db")
         c = conn.cursor()
-        c.execute("SELECT * FROM materials")
-        self.materials = c.fetchall()
-        c.execute("SELECT * FROM oceans")
-        self.oceans = c.fetchall()
-        c.execute("""SELECT country_id, country_name, ocean_id
-                    FROM countries
-                    GROUP BY country_name""")
-        self.countries = c.fetchall()
-        c.execute("SELECT * FROM local")
-        self.local = c.fetchall()
-        c.execute("SELECT * FROM propulsion")
-        self.propulsion = c.fetchall()
-        c.execute("SELECT * FROM sheathing")
-        self.sheathing = c.fetchall()
-        c.execute("SELECT * FROM fastening")
-        self.fastening = c.fetchall()
-        c.execute("SELECT * FROM purpose")
-        self.purpose = c.fetchall()
-        c.execute("SELECT * FROM type")
-        self.type = c.fetchall()
+        # list that you iterate through to dynamically add variables, rather than hardcode each
+        vars = [
+            "materials", "oceans", "country", "local", "propulsion",
+            "sheathing", "fastening", "purpose", "type", "ports",
+            "trade_routes", "coord_type", "confidence"
+        ]
+        for i in vars:
+            if i != "country":
+                c.execute(f"SELECT * FROM {i}")
+                self.__setattr__(i, c.fetchall())
+            else:
+                c.execute("""SELECT country_id, country_name, ocean_id
+                             FROM countries
+                             GROUP BY country_name""")
+                self.__setattr__(i, c.fetchall())
         conn.close()
         
 
@@ -310,21 +298,62 @@ class MainWindow(QMainWindow):
             #else:
                 #filtered = [w for w in self.shipwrecks if local_filter == w[7]]
 
-        year_filter = self.year_input.text().strip()
-        if year_filter:
-            year2_filter = self.year2_input.text().strip()
-            if year2_filter:
-                try:
-                    year_filter = int(year_filter)
-                    year2_filter = int(year2_filter)
-                except ValueError:
-                    print("Invalid year input. Please enter valid integers.")
-                    return
-                filtered = [w for w in self.shipwrecks if year_filter <= int(w[4]) <= year2_filter]
+        #year_filter = self.year_input.text().strip()
+        #if year_filter:
+        #    year2_filter = self.year2_input.text().strip()
+        #    if year2_filter:
+        #        try:
+        #            year_filter = int(year_filter)
+        #            year2_filter = int(year2_filter)
+        #        except ValueError:
+        #            print("Invalid year input. Please enter valid integers.")
+        #            return
+        #        filtered = [w for w in self.shipwrecks if year_filter <= int(w[4]) <= year2_filter]
+        #    else:
+        #        filtered = [w for w in self.shipwrecks if w[4] == year_filter]
+        #else:
+        #    filtered = self.shipwrecks
+
+        #port2_filter = self.port2_input.currentText().strip()
+        #if port2_filter:
+        #    if port2_filter == "Port Destination":
+        #        filtered = self.shipwrecks 
+        #    else:
+        #        filtered = [w for w in self.shipwrecks if port2_filter == w[21]]
+
+        #confidence_filter = self.confidence_input.currentText().strip()
+        #if confidence_filter:
+        #    if confidence_filter == "Confidence":
+        #        filtered = self.shipwrecks 
+        #    else:
+        #        filtered = [w for w in self.shipwrecks if confidence_filter == w[29]]
+        
+        #ctype_filter = self.ctype_input.currentText().strip()
+        #if ctype_filter:
+        #    if ctype_filter == "Coordinate Type":
+        #        filtered = self.shipwrecks 
+        #    else:
+        #        filtered = [w for w in self.shipwrecks if ctype_filter == w[27]]
+
+        #port4_filter = self.port4_input.currentText().strip()
+        #if port4_filter:    
+        #    if port4_filter == "Port Departed":
+        #        filtered = self.shipwrecks 
+        #    else:
+        #        filtered = [w for w in self.shipwrecks if port4_filter == w[23]]
+
+        trad_filter = self.trade_routes_input.currentText().strip()
+        if trad_filter:
+            if trad_filter == "Trade Routes":
+                filtered = self.shipwrecks 
             else:
-                filtered = [w for w in self.shipwrecks if w[4] == year_filter]
-        else:
-            filtered = self.shipwrecks
+                filtered = [w for w in self.shipwrecks if trad_filter == w[25]]
+
+        #name_filter = self.name_input.text().strip()
+        #if name_filter:
+        #    filtered = [w for w in self.shipwrecks if name_filter.lower() in w[0].lower()]
+        #else:
+        #    filtered = self.shipwrecks
 
         self.canvas.plot_shipwrecks(filtered)
 
