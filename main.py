@@ -61,6 +61,14 @@ class ShipwreckMapCanvas(FigureCanvas):
 
 
 class MainWindow(QMainWindow):
+
+    # list of inputs for the dropdowns and filters
+    # these are used to dynamically create the dropdowns in the UI
+    inputs = [
+        "materials", "coordinate_type", "confidence", "port2", "port4", "trade_routes", "oceans", "country",
+        "local", "sheathing", "type", "fastening", "purpose", "propulsion"
+    ]
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Shipwreck Map Viewer")
@@ -85,15 +93,9 @@ class MainWindow(QMainWindow):
 
         self.name_input = QLineEdit()
         self.name_input.setPlaceholderText("Ship Name")
-        
-        # list of inputs for the dropdowns
-        inputs = [
-            "materials", "coordinate_type", "confidence", "port2", "port4", "trade_routes", "oceans", "country",
-            "local", "sheathing", "type", "fastening", "purpose", "propulsion"
-        ]
 
         # Dynamically generate dropdowns, rather than hardcoding each one
-        for i in inputs:
+        for i in self.inputs:
             combo = QComboBox()
             setattr(self, f"{i}_input", combo)
             if i != "port2" and i != "port4":
@@ -146,8 +148,6 @@ class MainWindow(QMainWindow):
 
     def load_data(self):
         # Connect to SQLite and load shipwreck data
-        # TODO: replace with one full sql query to get all data
-        # FOR TESTING THIS IS FINE 
         conn = sqlite3.connect("shipwrecks.db")
         c = conn.cursor()
         c.execute("""SELECT
@@ -231,129 +231,48 @@ class MainWindow(QMainWindow):
 
     def handle_search(self):
         """ Filter shipwrecks based on user input and update the plot. """
-        # TODO: immplement a switch case rather than 500 lines of if statements
-        # TODO once this is complete and I know the filters and all the tables are correct
 
-        #material_filter = self.material_input.currentText().strip()
-        #if material_filter:
-            #if material_filter == "All Materials":
-                #filtered = self.shipwrecks 
-            #else:
-                #filtered = [w for w in self.shipwrecks if material_filter == w[6]] 
+        indexes = [6, 27, 29, 21, 23, 25, 8, 9, 7, 13, 19, 15, 17, 11] # this is where the filters check for values in shipwrecks
+        filtered = self.shipwrecks  # Start with all shipwrecks
+        counter = 0  # Counter to check if any filters are applied
 
-        #propulsion_filter = self.propulsion_input.currentText().strip()
-        #if propulsion_filter:
-            #f propulsion_filter == "Propulsion":
-                #filtered = self.shipwrecks 
-            #else:
-                #filtered = [w for w in self.shipwrecks if propulsion_filter == w[11]]
-        
-        #sheathing_filter = self.sheathing_input.currentText().strip()
-        #if sheathing_filter:
-            #if sheathing_filter == "Sheathing":
-                #filtered = self.shipwrecks 
-            #else:
-                #filtered = [w for w in self.shipwrecks if sheathing_filter == w[13]]
-
-        #fastening_filter = self.fastening_input.currentText().strip()
-        #if fastening_filter:
-            #if fastening_filter == "Fastening":
-                #filtered = self.shipwrecks 
-            #else:
-                #filtered = [w for w in self.shipwrecks if fastening_filter == w[15]]
-
-        #purpose_filter = self.purpose_input.currentText().strip()
-        #if purpose_filter:
-            #if purpose_filter == "Purpose":
-                #filtered = self.shipwrecks 
-            #else:
-                #filtered = [w for w in self.shipwrecks if purpose_filter == w[17]]
-
-        #type_filter = self.type_input.currentText().strip()
-        #if type_filter:
-            #if type_filter == "Type":
-                #filtered = self.shipwrecks
-            #else:
-                #filtered = [w for w in self.shipwrecks if type_filter == w[19]]
-        
-        
-        #ocean_filter = self.ocean_input.currentText().strip()
-        #if ocean_filter:
-            #if ocean_filter == "Oceans":
-                #filtered = self.shipwrecks 
-            #else:
-                #filtered = [w for w in self.shipwrecks if ocean_filter == w[8]]
-
-        #country_filter = self.country_input.currentText().strip()
-        #if country_filter:
-            #if country_filter == "Countries":
-                #filtered = self.shipwrecks 
-            #else:
-                #filtered = [w for w in self.shipwrecks if country_filter == w[9]]
-
-        #local_filter = self.local_input.currentText().strip()
-        #if local_filter:    
-            #if local_filter == "Locations":
-                #filtered = self.shipwrecks 
-            #else:
-                #filtered = [w for w in self.shipwrecks if local_filter == w[7]]
-
-        #year_filter = self.year_input.text().strip()
-        #if year_filter:
-        #    year2_filter = self.year2_input.text().strip()
-        #    if year2_filter:
-        #        try:
-        #            year_filter = int(year_filter)
-        #            year2_filter = int(year2_filter)
-        #        except ValueError:
-        #            print("Invalid year input. Please enter valid integers.")
-        #            return
-        #        filtered = [w for w in self.shipwrecks if year_filter <= int(w[4]) <= year2_filter]
-        #    else:
-        #        filtered = [w for w in self.shipwrecks if w[4] == year_filter]
-        #else:
-        #    filtered = self.shipwrecks
-
-        #port2_filter = self.port2_input.currentText().strip()
-        #if port2_filter:
-        #    if port2_filter == "Port Destination":
-        #        filtered = self.shipwrecks 
-        #    else:
-        #        filtered = [w for w in self.shipwrecks if port2_filter == w[21]]
-
-        #confidence_filter = self.confidence_input.currentText().strip()
-        #if confidence_filter:
-        #    if confidence_filter == "Confidence":
-        #        filtered = self.shipwrecks 
-        #    else:
-        #        filtered = [w for w in self.shipwrecks if confidence_filter == w[29]]
-        
-        #ctype_filter = self.ctype_input.currentText().strip()
-        #if ctype_filter:
-        #    if ctype_filter == "Coordinate Type":
-        #        filtered = self.shipwrecks 
-        #    else:
-        #        filtered = [w for w in self.shipwrecks if ctype_filter == w[27]]
-
-        #port4_filter = self.port4_input.currentText().strip()
-        #if port4_filter:    
-        #    if port4_filter == "Port Departed":
-        #        filtered = self.shipwrecks 
-        #    else:
-        #        filtered = [w for w in self.shipwrecks if port4_filter == w[23]]
-
-        trad_filter = self.trade_routes_input.currentText().strip()
-        if trad_filter:
-            if trad_filter == "Trade Routes":
-                filtered = self.shipwrecks 
+        for i, input_name in enumerate(self.inputs):
+            input_widget = getattr(self, f"{input_name}_input")
+            selected_text = input_widget.currentText().strip()
+            if selected_text != f"All {input_name.capitalize()}s":
+                if selected_text == "Port Destination" or selected_text == "Port Departed":
+                    # Special case for ports, since they are handled differently
+                    filtered = filtered  # Keep the filtered list as is
+                else:
+                    filtered = [w for w in filtered if selected_text == w[indexes[i]]]
+                    counter += 1
+            elif counter != 0:
+                filtered = filtered # If no filter on current iteration, but filters in previous, we keep the filtered list as is
             else:
-                filtered = [w for w in self.shipwrecks if trad_filter == w[25]]
+                filtered = self.shipwrecks # If no filters are applied, reset to all shipwrecks
 
-        #name_filter = self.name_input.text().strip()
-        #if name_filter:
-        #    filtered = [w for w in self.shipwrecks if name_filter.lower() in w[0].lower()]
-        #else:
-        #    filtered = self.shipwrecks
+        # unique filters that are not in the inputs list
+        year_filter = self.year_input.text().strip()
+        if year_filter:
+            year2_filter = self.year2_input.text().strip()
+            if year2_filter:
+                try:
+                    year_filter = int(year_filter)
+                    year2_filter = int(year2_filter)
+                except ValueError:
+                    print("Invalid year input. Please enter valid integers.")
+                    return
+                filtered = [w for w in filtered if year_filter <= int(w[4]) <= year2_filter]
+            else:
+                filtered = [w for w in filtered if w[4] == year_filter]
+        else:
+            filtered = filtered  # If no year filter is applied, keep the filtered list as is
+
+        name_filter = self.name_input.text().strip()
+        if name_filter:
+            filtered = [w for w in filtered if name_filter.lower() in w[0].lower()]
+        else:
+            filtered = filtered
 
         self.canvas.plot_shipwrecks(filtered)
 
