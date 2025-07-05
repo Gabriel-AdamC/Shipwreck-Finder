@@ -15,6 +15,7 @@ from matplotlib.figure import Figure
 
 # TODO: add logic to the filter dropdowns so that they only show relevant options i.e hierarchy for locations
 #           I think I may need to use one large dict for this, rather than several vars for the lists in load_lists()
+# TODO: push to main branch, as this is a working version
 
 # TODO: Add a page gui for data entry, so that you can add shipwrecks to the database
 # TODO: Add a page gui for data editing, so that you can edit shipwrecks in the database
@@ -22,6 +23,8 @@ from matplotlib.figure import Figure
 #           May face issues with auto-incrementing IDs, so may need to handle that in the database
 # TODO: plot data based on most accurate info, as not all shipwrecks have coordinates
 # TODO: Add the click functionality to the map so that it shows the shipwreck info
+# TODO: Optimise the code in location_change() to avoid repetition
+# TODO: change countrys to countries on location_change(). Currently it doesnt work if it has countries for some reason.
 
 
 class ShipwreckMapCanvas(FigureCanvas):
@@ -157,6 +160,142 @@ class MainWindow(QMainWindow):
 
         # Create functional hierarchy for the dropdowns
         self.materials_input.currentTextChanged.connect(self.material_change)
+        self.oceans_input.currentTextChanged.connect(self.location_change)
+        self.country_input.currentTextChanged.connect(self.location_change)
+        self.local_input.currentTextChanged.connect(self.location_change)
+
+    def location_change(self):
+        """Update country and local dropdowns based on selected ocean or country."""
+
+        # self.country => (country_id, country_name, ocean_id)
+        # self.local => (local_id, local_name, country_id, ocean_id)
+        # self.oceans => (ocean_id, ocean_name)
+
+        selected_ocean = self.oceans_input.currentText().strip()
+        selected_country = self.country_input.currentText().strip()
+        selected_local = self.local_input.currentText().strip()
+
+        # Reset all dropdowns first to avoid duplication
+        self.oceans_input.blockSignals(True)
+        self.country_input.blockSignals(True)
+        self.local_input.blockSignals(True)
+
+        prev_country = self.country_input.currentText().strip()
+        prev_local = self.local_input.currentText().strip()
+        prev_ocean = self.oceans_input.currentText().strip()
+
+
+        if selected_ocean != "All Oceans":
+            # Filter countries that border selected ocean
+            filtered_countries = [c for c in self.country if c[2] == self._get_ocean_id_by_name(selected_ocean)]
+            self.country_input.clear()
+            self.country_input.addItem("All Countrys")
+            for country in filtered_countries:
+                self.country_input.addItem(country[1])
+            if prev_country in [country[1] for country in filtered_countries]:
+                self.country_input.setCurrentText(prev_country)
+            else:
+                self.country_input.setCurrentIndex(0) 
+
+            # Filter locals that also border same ocean
+            filtered_locals = [l for l in self.local if l[3] == self._get_ocean_id_by_name(selected_ocean)]
+            self.local_input.clear()
+            self.local_input.addItem("All Locals")
+            for local in filtered_locals:
+                self.local_input.addItem(local[1])
+            if prev_local in [local[1] for local in filtered_locals]:
+                self.local_input.setCurrentText(prev_local)
+            else:
+                self.local_input.setCurrentIndex(0)
+
+        elif selected_country != "All Countries":
+            country_id = self._get_country_id_by_name(selected_country)
+
+            # Filter locals in selected country
+            filtered_locals = [l for l in self.local if l[2] == country_id]
+            self.local_input.clear()
+            self.local_input.addItem("All Locals")
+            for local in filtered_locals:
+                self.local_input.addItem(local[1])
+            if prev_local in [local[1] for local in filtered_locals]:
+                self.local_input.setCurrentText(prev_local)
+            else:
+                self.local_input.setCurrentIndex(0)
+
+            # Find and set ocean associated with country
+            ocean_id = next((c[2] for c in self.country if c[0] == country_id), None)
+            filtered_oceans = [o for o in self.oceans if o[0] == ocean_id]
+            self.oceans_input.clear()
+            self.oceans_input.addItem("All Oceans")
+            for ocean in filtered_oceans:
+                self.oceans_input.addItem(ocean[1])
+            if prev_ocean in [ocean[1] for ocean in filtered_oceans]:
+                self.oceans_input.setCurrentText(prev_ocean)
+            else:
+                self.oceans_input.setCurrentIndex(0)
+
+        elif selected_local != "All Locals":
+            # Get local row
+            local_row = next((l for l in self.local if l[1] == selected_local), None)
+            if local_row:
+                ocean_id = local_row[3]
+                country_id = local_row[2]
+
+                filtered_oceans = [o for o in self.oceans if o[0] == ocean_id]
+                self.oceans_input.clear()
+                self.oceans_input.addItem("All Oceans")
+                for ocean in filtered_oceans:
+                    self.oceans_input.addItem(ocean[1])
+                if prev_ocean in [ocean[1] for ocean in filtered_oceans]:
+                    self.oceans_input.setCurrentText(prev_ocean)
+                else:
+                    self.oceans_input.setCurrentIndex(0)
+
+                filtered_countries = [c for c in self.country if c[0] == country_id]
+                self.country_input.clear()
+                self.country_input.addItem("All Countrys")
+                for country in filtered_countries:
+                    self.country_input.addItem(country[1])
+                if prev_country in [country[1] for country in filtered_countries]:
+                    self.country_input.setCurrentText(prev_country)
+                else:
+                    self.country_input.setCurrentIndex(0)
+
+        else:
+            # No filters selected: show all
+            self.oceans_input.blockSignals(False)
+            self.country_input.blockSignals(False)
+            self.local_input.blockSignals(False)
+            self.oceans_input.clear()
+            self.oceans_input.addItem("All Oceans")
+            for o in self.oceans:
+                self.oceans_input.addItem(o[1])
+            self.oceans_input.setCurrentIndex(0)
+
+            self.country_input.clear()
+            self.country_input.addItem("All Countrys")
+            for c in self.country:
+                self.country_input.addItem(c[1])
+            self.country_input.setCurrentIndex(0)
+
+            self.local_input.clear()
+            self.local_input.addItem("All Locals")
+            for l in self.local:
+                self.local_input.addItem(l[1])
+            self.local_input.setCurrentIndex(0)
+
+        self.oceans_input.blockSignals(False)
+        self.country_input.blockSignals(False)
+        self.local_input.blockSignals(False)   
+
+
+    def _get_country_id_by_name(self, name):
+        return next((c[0] for c in self.country if c[1] == name), None)
+
+
+    def _get_ocean_id_by_name(self, name):
+        return next((o[0] for o in self.oceans if o[1] == name), None)
+
 
     def material_change(self):
         """ Update the dropdowns based on the selected material. """
@@ -236,6 +375,7 @@ class MainWindow(QMainWindow):
                 LEFT JOIN wood_types ON builds.wood_id = wood_types.wood_id
                 """)
         self.shipwrecks = c.fetchall()
+        
 
     def load_lists(self):
         """ Load all the info needed for the lists """
@@ -262,6 +402,7 @@ class MainWindow(QMainWindow):
 
     def plot_all(self):
         self.canvas.plot_shipwrecks(self.shipwrecks)
+
 
     def handle_search(self):
         """ Filter shipwrecks based on user input and update the plot. """
@@ -328,6 +469,8 @@ class MainWindow(QMainWindow):
             filtered = filtered
 
         self.canvas.plot_shipwrecks(filtered)
+        print(counter)
+
 
     def reset(self):
         """ Reset all filters and reload the original shipwrecks. """
