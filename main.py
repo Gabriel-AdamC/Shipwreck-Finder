@@ -13,11 +13,15 @@ import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 
-
-# TODO: add a dict or list for wrecks so that i dont filter every time
-#           although this is already kinda done with self.wrecks
 # TODO: add logic to the filter dropdowns so that they only show relevant options i.e hierarchy for locations
 #           I think I may need to use one large dict for this, rather than several vars for the lists in load_lists()
+
+# TODO: Add a page gui for data entry, so that you can add shipwrecks to the database
+# TODO: Add a page gui for data editing, so that you can edit shipwrecks in the database
+# TODO: Add a page gui for data deletion, so that you can delete shipwrecks from the database
+#           May face issues with auto-incrementing IDs, so may need to handle that in the database
+# TODO: plot data based on most accurate info, as not all shipwrecks have coordinates
+# TODO: Add the click functionality to the map so that it shows the shipwreck info
 
 
 class ShipwreckMapCanvas(FigureCanvas):
@@ -53,7 +57,7 @@ class ShipwreckMapCanvas(FigureCanvas):
 
         # TODO: update logic to plot based off most accurate data
         # i.e. if coords, use, else if local, use that, else if ocean, use that
-        for name, lat, lon, id, year, mat_id, mat, local, ocean, country, prop_id, prop, sheath_id, sheath, fast_id, fast, purp_id, purp, type_id, type, por2_id, por2, por4_id, por4, trad_id, trad, ctpye_id, ctype, con_id, con in wrecks:
+        for name, lat, lon, id, year, mat_id, mat, local, ocean, country, prop_id, prop, sheath_id, sheath, fast_id, fast, purp_id, purp, type_id, type, por2_id, por2, por4_id, por4, trad_id, trad, ctpye_id, ctype, con_id, con, wood_id, wood in wrecks:
             self.ax.plot(lon, lat, 'ro')
         #print(wrecks)  # Debugging line to check the wrecks being plotted 
 
@@ -65,8 +69,8 @@ class MainWindow(QMainWindow):
     # list of inputs for the dropdowns and filters
     # these are used to dynamically create the dropdowns in the UI
     inputs = [
-        "materials", "coordinate_type", "confidence", "port2", "port4", "trade_routes", "oceans", "country",
-        "local", "sheathing", "type", "fastening", "purpose", "propulsion"
+        "coord_type", "confidence", "port2", "port4", "trade_routes", "oceans", "country",
+        "local", "sheathing", "type", "fastening", "purpose", "propulsion", "materials"
     ]
 
     def __init__(self):
@@ -83,7 +87,7 @@ class MainWindow(QMainWindow):
         # Controls
         #load the materials for the materials dropdown
         self.load_lists()
-        controls_layout = QGridLayout()
+        self.controls_layout = QGridLayout()
 
         self.year_input = QLineEdit()
         self.year_input.setPlaceholderText("Year filter FROM ")
@@ -116,24 +120,29 @@ class MainWindow(QMainWindow):
                 combo.setPlaceholderText("Port Departed filter")
 
         self.search_button = QPushButton("Search")
+        self.reset_button = QPushButton("Reset")
+        self.reset_button.clicked.connect(self.reset)
         self.search_button.clicked.connect(self.handle_search)
 
         controls = [
             QLabel("Filters"), self.year_input, self.year2_input, self.name_input,
-            self.materials_input, self.propulsion_input, self.sheathing_input,
-            self.fastening_input, self.purpose_input, self.type_input,
             self.oceans_input, self.country_input, self.local_input,
             self.port2_input, self.port4_input, self.trade_routes_input,
-            self.coordinate_type_input, self.confidence_input, self.search_button
+            self.coord_type_input, self.confidence_input, self.type_input,
+            self.fastening_input, self.purpose_input,
+            self.propulsion_input, self.sheathing_input, self.materials_input
         ]
 
-        cols = 6
+        cols = 7
         for i, widget in enumerate(controls):
             row = i // cols
             col = i % cols
-            controls_layout.addWidget(widget, row, col)
+            self.controls_layout.addWidget(widget, row, col)
 
-        main_layout.addLayout(controls_layout)
+        self.controls_layout.addWidget(self.search_button, 4, 0)
+        self.controls_layout.addWidget(self.reset_button, 4, 1)
+
+        main_layout.addLayout(self.controls_layout)
 
         # Matplotlib canvas and toolbar
         self.canvas = ShipwreckMapCanvas(self)
@@ -145,6 +154,28 @@ class MainWindow(QMainWindow):
         # Load data from database
         self.load_data()
         self.plot_all()
+
+        # Create functional hierarchy for the dropdowns
+        self.materials_input.currentTextChanged.connect(self.material_change)
+
+    def material_change(self):
+        """ Update the dropdowns based on the selected material. """
+        selected_material = self.materials_input.currentText().strip()
+        if selected_material == "wood":
+            if not hasattr(self, 'wood_types_input'):
+                # Show wood types if wood is selected
+                self.wood_types_input = QComboBox()
+                self.wood_types_input.addItem("All Wood Types")
+                for item in self.wood_types:
+                    self.wood_types_input.addItem(item[1])
+                self.controls_layout.addWidget(self.wood_types_input, 2, 4) 
+        else:
+            if hasattr(self, 'wood_types_input'):
+                # Remove wood types dropdown if it exists
+                self.controls_layout.removeWidget(self.wood_types_input)
+                self.wood_types_input.deleteLater()
+                del self.wood_types_input
+
 
     def load_data(self):
         # Connect to SQLite and load shipwreck data
@@ -180,7 +211,9 @@ class MainWindow(QMainWindow):
                     misc.coord_type,
                     coord_type.coord_type,
                     misc.confidence,
-                    confidence.confidence
+                    confidence.confidence,
+                    builds.wood_id,
+                    wood_types.name
                 FROM wrecks
                 LEFT JOIN builds ON wrecks.id = builds.build_id 
                 LEFT JOIN propulsion ON builds.propulsion_id = propulsion.propulsion_id
@@ -200,6 +233,7 @@ class MainWindow(QMainWindow):
                 LEFT JOIN misc ON wrecks.id = misc.ship_id
                 LEFT JOIN coord_type ON misc.coord_type = coord_type.id
                 LEFT JOIN confidence ON misc.confidence = confidence.id
+                LEFT JOIN wood_types ON builds.wood_id = wood_types.wood_id
                 """)
         self.shipwrecks = c.fetchall()
 
@@ -212,7 +246,7 @@ class MainWindow(QMainWindow):
         vars = [
             "materials", "oceans", "country", "local", "propulsion",
             "sheathing", "fastening", "purpose", "type", "ports",
-            "trade_routes", "coord_type", "confidence"
+            "trade_routes", "coord_type", "confidence", "wood_types"
         ]
         for i in vars:
             if i != "country":
@@ -232,19 +266,34 @@ class MainWindow(QMainWindow):
     def handle_search(self):
         """ Filter shipwrecks based on user input and update the plot. """
 
-        indexes = [6, 27, 29, 21, 23, 25, 8, 9, 7, 13, 19, 15, 17, 11] # this is where the filters check for values in shipwrecks
+        filter_field_indexes = {
+            "materials": 6,     
+            "coord_type": 27,   
+            "confidence": 29,
+            "port2": 21,        
+            "port4": 23,        
+            "trade_routes": 25,
+            "oceans": 8,
+            "country": 9,
+            "local": 7,
+            "sheathing": 13,
+            "type": 19,
+            "fastening": 15,
+            "purpose": 17,
+            "propulsion": 11
+        }
         filtered = self.shipwrecks  # Start with all shipwrecks
         counter = 0  # Counter to check if any filters are applied
+        exceptions = ["Port Destination", "Port Departed"]  # Special cases for ports
 
-        for i, input_name in enumerate(self.inputs):
+        for input_name, index in filter_field_indexes.items():
             input_widget = getattr(self, f"{input_name}_input")
             selected_text = input_widget.currentText().strip()
             if selected_text != f"All {input_name.capitalize()}s":
-                if selected_text == "Port Destination" or selected_text == "Port Departed":
-                    # Special case for ports, since they are handled differently
-                    filtered = filtered  # Keep the filtered list as is
+                if selected_text in exceptions:
+                    continue # Keep the filtered list as is
                 else:
-                    filtered = [w for w in filtered if selected_text == w[indexes[i]]]
+                    filtered = [w for w in filtered if selected_text == w[index]]
                     counter += 1
             elif counter != 0:
                 filtered = filtered # If no filter on current iteration, but filters in previous, we keep the filtered list as is
@@ -252,6 +301,10 @@ class MainWindow(QMainWindow):
                 filtered = self.shipwrecks # If no filters are applied, reset to all shipwrecks
 
         # unique filters that are not in the inputs list
+        wood_type_filter = self.wood_types_input.currentText().strip() if hasattr(self, 'wood_types_input') else None
+        if wood_type_filter and wood_type_filter != "All Wood Types":
+            filtered = [w for w in filtered if wood_type_filter == w[31]]
+
         year_filter = self.year_input.text().strip()
         if year_filter:
             year2_filter = self.year2_input.text().strip()
@@ -275,6 +328,17 @@ class MainWindow(QMainWindow):
             filtered = filtered
 
         self.canvas.plot_shipwrecks(filtered)
+
+    def reset(self):
+        """ Reset all filters and reload the original shipwrecks. """
+        self.year_input.clear()
+        self.year2_input.clear()
+        self.name_input.clear()
+
+        for input_name in self.inputs:
+            input_widget = getattr(self, f"{input_name}_input")
+            input_widget.setCurrentIndex(0)  
+        self.canvas.plot_shipwrecks(self.shipwrecks)
 
 
 if __name__ == "__main__":
