@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout, QTabWidget, QLineEdit
 from PyQt5.QtCore import pyqtSignal
 
 class DataEntryWindow(QWidget):
@@ -14,13 +14,33 @@ class DataEntryWindow(QWidget):
 
     def entry_ui(self, layout):
         """ Set up the UI for data entry. """
-        # This method can be expanded to include actual data entry fields
-        self.label = QLabel("Data Entry Page")
-        # Add more widgets as needed for data entry
-        # For example, text fields, dropdowns, etc.
-        
-        # Example of adding a button to submit data
-        self.btn_submit = QPushButton("Submit Data")
-        #self.btn_submit.clicked.connect(self.submit_data)
-        layout.addWidget(self.btn_submit)
-        layout.addWidget(self.label)
+        # Creates the buttons to change between parts of the app
+        self.page_change = QHBoxLayout()
+        self.btn_map = QPushButton("Map")
+        self.btn_map.clicked.connect(lambda: self.switch_signal.emit("map"))
+        self.btn_entry = QPushButton("Data Entry")
+        self.btn_entry.clicked.connect(lambda: self.switch_signal.emit("data_entry"))
+        self.page_change.addWidget(self.btn_map)
+        self.page_change.addWidget(self.btn_entry)
+        layout.addLayout(self.page_change)
+
+        # I want to loop through the form inputs, so that I can avoid hardcoding each one.
+        # So here is a dict of all the info I need to effectively loop and dynamically create
+        self.sections = {
+            "wreck": {
+                "kraken_id": QLineEdit(),
+            },
+            "location": {
+
+            }
+        }
+
+        # Create tabs for grouped sections of the form, rather than one extremely long form
+        form_sections = QTabWidget()
+        tabs = ["Location", "Construction Details", "Wreck Event", "Registration Details", "Personnel", "Archaeological Details", "Sources"]
+        for name in tabs:
+            tab = QWidget()
+            tab_layout = QVBoxLayout()
+            tab.setLayout(tab_layout)
+            form_sections.addTab(tab, name)
+        layout.addWidget(form_sections)

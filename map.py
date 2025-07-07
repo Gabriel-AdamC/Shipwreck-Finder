@@ -15,16 +15,6 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from PyQt5.QtCore import pyqtSignal
 
-# TODO: Add a page gui for data entry, so that you can add shipwrecks to the database
-# TODO: Add a page gui for data editing, so that you can edit shipwrecks in the database
-# TODO: Add a page gui for data deletion, so that you can delete shipwrecks from the database
-#           May face issues with auto-incrementing IDs, so may need to handle that in the database
-# TODO: plot data based on most accurate info, as not all shipwrecks have coordinates
-# TODO: Add the click functionality to the map so that it shows the shipwreck info
-# TODO: Optimise the code in location_change() to avoid repetition
-# TODO: change countrys to countries on location_change(). Currently it doesnt work if it has countries for some reason.
-
-
 class ShipwreckMapCanvas(FigureCanvas):
     def __init__(self, parent=None, width=8, height=6, dpi=100):
         self.fig = plt.figure(figsize=(10, 5))
