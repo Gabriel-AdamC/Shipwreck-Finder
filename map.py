@@ -3,10 +3,8 @@ import sqlite3
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget,
-    QVBoxLayout, QGridLayout, QPushButton,
-    QLineEdit, QLabel, QComboBox, QStackedWidget,
-    QHBoxLayout
+    QWidget, QVBoxLayout, QGridLayout, QPushButton,
+    QLineEdit, QLabel, QComboBox, QHBoxLayout
 )
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavBar
@@ -63,7 +61,7 @@ class MapWindow(QWidget):
     # list of inputs for the dropdowns and filters
     # these are used to dynamically create the dropdowns in the UI
     inputs = [
-        "coord_type", "confidence", "port2", "port4", "trade_routes", "oceans", "country",
+        "coord_type", "confidence", "port2", "port4", "trade_routes", "oceans", "countries",
         "local", "sheathing", "type", "fastening", "purpose", "propulsion", "materials"
     ]
 
@@ -131,7 +129,7 @@ class MapWindow(QWidget):
 
         controls = [
             QLabel("Filters"), self.year_input, self.year2_input, self.name_input,
-            self.oceans_input, self.country_input, self.local_input,
+            self.oceans_input, self.countries_input, self.local_input,
             self.port2_input, self.port4_input, self.trade_routes_input,
             self.coord_type_input, self.confidence_input, self.type_input,
             self.fastening_input, self.purpose_input,
@@ -164,7 +162,7 @@ class MapWindow(QWidget):
         # Create functional hierarchy for the dropdowns
         self.materials_input.currentTextChanged.connect(self.material_change)
         self.oceans_input.currentTextChanged.connect(lambda: self.location_change("ocean"))
-        self.country_input.currentTextChanged.connect(lambda: self.location_change("country"))
+        self.countries_input.currentTextChanged.connect(lambda: self.location_change("country"))
         self.local_input.currentTextChanged.connect(lambda: self.location_change("local"))
 
 
@@ -176,30 +174,30 @@ class MapWindow(QWidget):
         # self.oceans => (ocean_id, ocean_name)
 
         selected_ocean = self.oceans_input.currentText().strip()
-        selected_country = self.country_input.currentText().strip()
+        selected_country = self.countries_input.currentText().strip()  
         selected_local = self.local_input.currentText().strip()
 
         # Reset all dropdowns first to avoid duplication
         self.oceans_input.blockSignals(True)
-        self.country_input.blockSignals(True)
+        self.countries_input.blockSignals(True)
         self.local_input.blockSignals(True)
 
-        prev_country = self.country_input.currentText().strip()
+        prev_country = self.countries_input.currentText().strip()
         prev_local = self.local_input.currentText().strip()
         prev_ocean = self.oceans_input.currentText().strip()
 
 
         if source == "ocean" and selected_ocean != "All Oceans":
             # Filter countries that border selected ocean
-            filtered_countries = [c for c in self.country if c[2] == self._get_ocean_id_by_name(selected_ocean)]
-            self.country_input.clear()
-            self.country_input.addItem("All Countrys")
+            filtered_countries = [co for co in self.country_ocean if co[1] == self._get_ocean_id_by_name(selected_ocean)]
+            self.countries_input.clear()
+            self.countries_input.addItem("All Countriess")
             for country in filtered_countries:
-                self.country_input.addItem(country[1])
+                self.countries_input.addItem(country[1])
             if prev_country in [country[1] for country in filtered_countries]:
-                self.country_input.setCurrentText(prev_country)
+                self.countries_input.setCurrentText(prev_country)
             else:
-                self.country_input.setCurrentIndex(0) 
+                self.countries_input.setCurrentIndex(0) 
 
             # Filter locals that also border same ocean
             filtered_locals = [l for l in self.local if l[3] == self._get_ocean_id_by_name(selected_ocean)]
@@ -212,7 +210,7 @@ class MapWindow(QWidget):
             else:
                 self.local_input.setCurrentIndex(0)
 
-        elif source == "country" and selected_country != "All Countries":
+        elif source == "country" and selected_country != "All Countriess":
             country_id = self._get_country_id_by_name(selected_country)
 
             # Filter locals in selected country
@@ -227,7 +225,7 @@ class MapWindow(QWidget):
                 self.local_input.setCurrentIndex(0)
 
             # Find and set ocean associated with country
-            ocean_id = next((c[2] for c in self.country if c[0] == country_id), None)
+            ocean_id = next((co[1] for co in self.country_ocean if co[0] == country_id), None) 
             filtered_oceans = [o for o in self.oceans if o[0] == ocean_id]
             self.oceans_input.clear()
             self.oceans_input.addItem("All Oceanss")
@@ -255,20 +253,20 @@ class MapWindow(QWidget):
                 else:
                     self.oceans_input.setCurrentIndex(0)
 
-                filtered_countries = [c for c in self.country if c[0] == country_id]
-                self.country_input.clear()
-                self.country_input.addItem("All Countrys")
+                filtered_countries = [c for c in self.countries if c[0] == country_id]
+                self.countries_input.clear()
+                self.countries_input.addItem("All Countriess")
                 for country in filtered_countries:
-                    self.country_input.addItem(country[1])
+                    self.countries_input.addItem(country[1])
                 if prev_country in [country[1] for country in filtered_countries]:
-                    self.country_input.setCurrentText(prev_country)
+                    self.countries_input.setCurrentText(prev_country)
                 else:
-                    self.country_input.setCurrentIndex(0)
+                    self.countries_input.setCurrentIndex(0)
 
         else:
             # No filters selected: show all
             self.oceans_input.blockSignals(False)
-            self.country_input.blockSignals(False)
+            self.countries_input.blockSignals(False)
             self.local_input.blockSignals(False)
             self.oceans_input.clear()
             self.oceans_input.addItem("All Oceanss")
@@ -276,11 +274,11 @@ class MapWindow(QWidget):
                 self.oceans_input.addItem(o[1])
             self.oceans_input.setCurrentIndex(0)
 
-            self.country_input.clear()
-            self.country_input.addItem("All Countrys")
-            for c in self.country:
-                self.country_input.addItem(c[1])
-            self.country_input.setCurrentIndex(0)
+            self.countries_input.clear()
+            self.countries_input.addItem("All Countrys")
+            for c in self.countries:
+                self.countries_input.addItem(c[1])
+            self.countries_input.setCurrentIndex(0)
 
             self.local_input.clear()
             self.local_input.addItem("All Locals")
@@ -289,12 +287,12 @@ class MapWindow(QWidget):
             self.local_input.setCurrentIndex(0)
 
         self.oceans_input.blockSignals(False)
-        self.country_input.blockSignals(False)
+        self.countries_input.blockSignals(False)
         self.local_input.blockSignals(False)   
 
 
     def _get_country_id_by_name(self, name):
-        return next((c[0] for c in self.country if c[1] == name), None)
+        return next((c[0] for c in self.countries if c[1] == name), None)
 
 
     def _get_ocean_id_by_name(self, name):
@@ -356,7 +354,9 @@ class MapWindow(QWidget):
                     misc.confidence,
                     confidence.confidence,
                     builds.wood_id,
-                    wood_types.name
+                    wood_types.name,
+                    country_ocean.country_id,
+                    country_ocean.ocean_id
                 FROM wrecks
                 LEFT JOIN builds ON wrecks.id = builds.build_id 
                 LEFT JOIN propulsion ON builds.propulsion_id = propulsion.propulsion_id
@@ -367,7 +367,6 @@ class MapWindow(QWidget):
                 LEFT JOIN materials ON builds.material_id = materials.material_id
                 LEFT JOIN locations ON wrecks.location_row_ID = locations.location_row_ID
                 LEFT JOIN local ON locations.local_id = local.local_id
-                LEFT JOIN oceans ON locations.ocean_id = oceans.ocean_id
                 LEFT JOIN countries ON locations.country_id = countries.country_id
                 LEFT JOIN voyage ON wrecks.id = voyage.ship_id
                 LEFT JOIN ports AS ports_to ON voyage.port_to = ports_to.id
@@ -377,6 +376,9 @@ class MapWindow(QWidget):
                 LEFT JOIN coord_type ON misc.coord_type = coord_type.id
                 LEFT JOIN confidence ON misc.confidence = confidence.id
                 LEFT JOIN wood_types ON builds.wood_id = wood_types.wood_id
+                LEFT JOIN country_ocean ON locations.country_id = country_ocean.country_id AND locations.ocean_id = country_ocean.ocean_id
+                LEFT JOIN countries AS co ON co.country_id = country_ocean.country_id
+                LEFT JOIN oceans ON oceans.ocean_id = country_ocean.ocean_id
                 """)
         self.shipwrecks = c.fetchall()
         
@@ -388,19 +390,13 @@ class MapWindow(QWidget):
         c = conn.cursor()
         # list that you iterate through to dynamically add variables, rather than hardcode each
         vars = [
-            "materials", "oceans", "country", "local", "propulsion",
+            "materials", "oceans", "countries", "local", "propulsion",
             "sheathing", "fastening", "purpose", "type", "ports",
-            "trade_routes", "coord_type", "confidence", "wood_types"
+            "trade_routes", "coord_type", "confidence", "wood_types", "country_ocean"
         ]
         for i in vars:
-            if i != "country":
-                c.execute(f"SELECT * FROM {i}")
-                self.__setattr__(i, c.fetchall())
-            else:
-                c.execute("""SELECT country_id, country_name, ocean_id
-                             FROM countries
-                             GROUP BY country_name""")
-                self.__setattr__(i, c.fetchall())
+            c.execute(f"SELECT * FROM {i}")
+            self.__setattr__(i, c.fetchall())
         conn.close()
         
 
@@ -419,7 +415,7 @@ class MapWindow(QWidget):
             "port4": 23,        
             "trade_routes": 25,
             "oceans": 8,
-            "country": 9,
+            "countries": 9,
             "local": 7,
             "sheathing": 13,
             "type": 19,

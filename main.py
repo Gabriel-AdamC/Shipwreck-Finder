@@ -2,6 +2,11 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget
 from map import MapWindow
 from data_entry import DataEntryWindow
 
+# TODO: fix the country and ocean filtering. 
+            # changed countries table to a junction table. Now the hierarchy logic is messed up
+            # The filtering logic at the bottom also needs a revamp then.
+# TODO: Add districts
+
 # TODO: Add a page gui for data entry, so that you can add shipwrecks to the database
 # TODO: Add a page gui for data editing, so that you can edit shipwrecks in the database
 # TODO: Add a page gui for data deletion, so that you can delete shipwrecks from the database
