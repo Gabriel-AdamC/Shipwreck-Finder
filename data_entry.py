@@ -154,14 +154,10 @@ class DataEntryWindow(QWidget):
                             widget.addItem(row[0])
 
                     form.addRow(key.replace('_', ' ').capitalize(), widget)
+                elif isinstance(widget, QLineEdit):
+                    form.addRow(key.replace('_', ' ').capitalize(), widget)
+                else: # the only other widget is a button
+                    form.addRow(key, widget)
+                    
             tab_layout.addLayout(form)
-                #elif i[1] == QLineEdit:
-                    # place i + : 
-                    # place text box
-                #else: # else i is a button in images
-                    # place placeholder
-                    # place button
-                    # connect it to onclick function
-
-                
         layout.addWidget(form_sections)

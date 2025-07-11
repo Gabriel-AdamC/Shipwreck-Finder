@@ -2,9 +2,11 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget
 from map import MapWindow
 from data_entry import DataEntryWindow
 
+# TODO: finish form inputs
+# TODO: Make sure hierarchy works for the data entry as well
 # TODO: fix the country and ocean filtering. 
-            # changed countries table to a junction table. Now the hierarchy logic is messed up
             # The filtering logic at the bottom also needs a revamp then.
+            # although it may be fine, finish the form, add data and then check
 # TODO: Add districts
 
 # TODO: Add a page gui for data entry, so that you can add shipwrecks to the database

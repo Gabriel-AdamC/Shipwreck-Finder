@@ -12,6 +12,7 @@ import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from PyQt5.QtCore import pyqtSignal
+from helpers import (location_change, get_country_id_by_name, get_ocean_id_by_name)
 
 class ShipwreckMapCanvas(FigureCanvas):
     def __init__(self, parent=None, width=8, height=6, dpi=100):
@@ -161,142 +162,27 @@ class MapWindow(QWidget):
 
         # Create functional hierarchy for the dropdowns
         self.materials_input.currentTextChanged.connect(self.material_change)
-        self.oceans_input.currentTextChanged.connect(lambda: self.location_change("ocean"))
-        self.countries_input.currentTextChanged.connect(lambda: self.location_change("country"))
-        self.local_input.currentTextChanged.connect(lambda: self.location_change("local"))
+        self.oceans_input.currentTextChanged.connect(lambda: self.hierarchy("ocean"))
+        self.countries_input.currentTextChanged.connect(lambda: self.hierarchy("country"))
+        self.local_input.currentTextChanged.connect(lambda: self.hierarchy("local"))
 
-
-    def location_change(self, source):
-        """Update country and local dropdowns based on selected ocean or country."""
-
-        # self.country => (country_id, country_name, ocean_id)
-        # self.local => (local_id, local_name, country_id, ocean_id)
-        # self.oceans => (ocean_id, ocean_name)
-
-        selected_ocean = self.oceans_input.currentText().strip()
-        selected_country = self.countries_input.currentText().strip()  
-        selected_local = self.local_input.currentText().strip()
-
-        # Reset all dropdowns first to avoid duplication
-        self.oceans_input.blockSignals(True)
-        self.countries_input.blockSignals(True)
-        self.local_input.blockSignals(True)
-
-        prev_country = self.countries_input.currentText().strip()
-        prev_local = self.local_input.currentText().strip()
-        prev_ocean = self.oceans_input.currentText().strip()
-
-
-        if source == "ocean" and selected_ocean != "All Oceans":
-            # Filter countries that border selected ocean
-            filtered_countries = [co for co in self.country_ocean if co[1] == self._get_ocean_id_by_name(selected_ocean)]
-            self.countries_input.clear()
-            self.countries_input.addItem("All Countriess")
-            for country in filtered_countries:
-                self.countries_input.addItem(country[1])
-            if prev_country in [country[1] for country in filtered_countries]:
-                self.countries_input.setCurrentText(prev_country)
-            else:
-                self.countries_input.setCurrentIndex(0) 
-
-            # Filter locals that also border same ocean
-            filtered_locals = [l for l in self.local if l[3] == self._get_ocean_id_by_name(selected_ocean)]
-            self.local_input.clear()
-            self.local_input.addItem("All Locals")
-            for local in filtered_locals:
-                self.local_input.addItem(local[1])
-            if prev_local in [local[1] for local in filtered_locals]:
-                self.local_input.setCurrentText(prev_local)
-            else:
-                self.local_input.setCurrentIndex(0)
-
-        elif source == "country" and selected_country != "All Countriess":
-            country_id = self._get_country_id_by_name(selected_country)
-
-            # Filter locals in selected country
-            filtered_locals = [l for l in self.local if l[2] == country_id]
-            self.local_input.clear()
-            self.local_input.addItem("All Locals")
-            for local in filtered_locals:
-                self.local_input.addItem(local[1])
-            if prev_local in [local[1] for local in filtered_locals]:
-                self.local_input.setCurrentText(prev_local)
-            else:
-                self.local_input.setCurrentIndex(0)
-
-            # Find and set ocean associated with country
-            ocean_id = next((co[1] for co in self.country_ocean if co[0] == country_id), None) 
-            filtered_oceans = [o for o in self.oceans if o[0] == ocean_id]
-            self.oceans_input.clear()
-            self.oceans_input.addItem("All Oceanss")
-            for ocean in filtered_oceans:
-                self.oceans_input.addItem(ocean[1])
-            if prev_ocean in [ocean[1] for ocean in filtered_oceans]:
-                self.oceans_input.setCurrentText(prev_ocean)
-            else:
-                self.oceans_input.setCurrentIndex(0)
-
-        elif source == "local" and selected_local != "All Locals":
-            # Get local row
-            local_row = next((l for l in self.local if l[1] == selected_local), None)
-            if local_row:
-                ocean_id = local_row[3]
-                country_id = local_row[2]
-
-                filtered_oceans = [o for o in self.oceans if o[0] == ocean_id]
-                self.oceans_input.clear()
-                self.oceans_input.addItem("All Oceanss")
-                for ocean in filtered_oceans:
-                    self.oceans_input.addItem(ocean[1])
-                if prev_ocean in [ocean[1] for ocean in filtered_oceans]:
-                    self.oceans_input.setCurrentText(prev_ocean)
-                else:
-                    self.oceans_input.setCurrentIndex(0)
-
-                filtered_countries = [c for c in self.countries if c[0] == country_id]
-                self.countries_input.clear()
-                self.countries_input.addItem("All Countriess")
-                for country in filtered_countries:
-                    self.countries_input.addItem(country[1])
-                if prev_country in [country[1] for country in filtered_countries]:
-                    self.countries_input.setCurrentText(prev_country)
-                else:
-                    self.countries_input.setCurrentIndex(0)
-
-        else:
-            # No filters selected: show all
-            self.oceans_input.blockSignals(False)
-            self.countries_input.blockSignals(False)
-            self.local_input.blockSignals(False)
-            self.oceans_input.clear()
-            self.oceans_input.addItem("All Oceanss")
-            for o in self.oceans:
-                self.oceans_input.addItem(o[1])
-            self.oceans_input.setCurrentIndex(0)
-
-            self.countries_input.clear()
-            self.countries_input.addItem("All Countrys")
-            for c in self.countries:
-                self.countries_input.addItem(c[1])
-            self.countries_input.setCurrentIndex(0)
-
-            self.local_input.clear()
-            self.local_input.addItem("All Locals")
-            for l in self.local:
-                self.local_input.addItem(l[1])
-            self.local_input.setCurrentIndex(0)
-
-        self.oceans_input.blockSignals(False)
-        self.countries_input.blockSignals(False)
-        self.local_input.blockSignals(False)   
-
-
-    def _get_country_id_by_name(self, name):
-        return next((c[0] for c in self.countries if c[1] == name), None)
-
-
-    def _get_ocean_id_by_name(self, name):
-        return next((o[0] for o in self.oceans if o[1] == name), None)
+    
+    def hierarchy(self, source):
+        location_change(
+            source,
+            self.oceans_input.currentText().strip(),
+            self.countries_input.currentText().strip(),
+            self.local_input.currentText().strip(),
+            self.oceans,
+            self.countries,
+            self.local,
+            self.country_ocean,
+            self.oceans_input,
+            self.countries_input,
+            self.local_input,
+            get_ocean_id_by_name=lambda name: get_ocean_id_by_name(name, self.oceans),
+            get_country_id_by_name=lambda name: get_country_id_by_name(name, self.countries)
+        )
 
 
     def material_change(self):
@@ -368,6 +254,8 @@ class MapWindow(QWidget):
                 LEFT JOIN locations ON wrecks.location_row_ID = locations.location_row_ID
                 LEFT JOIN local ON locations.local_id = local.local_id
                 LEFT JOIN countries ON locations.country_id = countries.country_id
+                LEFT JOIN country_ocean ON locations.country_id = country_ocean.country_id
+                LEFT JOIN oceans ON oceans.ocean_id = country_ocean.ocean_id
                 LEFT JOIN voyage ON wrecks.id = voyage.ship_id
                 LEFT JOIN ports AS ports_to ON voyage.port_to = ports_to.id
                 LEFT JOIN ports AS ports_from ON voyage.port_from = ports_from.id
@@ -376,9 +264,6 @@ class MapWindow(QWidget):
                 LEFT JOIN coord_type ON misc.coord_type = coord_type.id
                 LEFT JOIN confidence ON misc.confidence = confidence.id
                 LEFT JOIN wood_types ON builds.wood_id = wood_types.wood_id
-                LEFT JOIN country_ocean ON locations.country_id = country_ocean.country_id AND locations.ocean_id = country_ocean.ocean_id
-                LEFT JOIN countries AS co ON co.country_id = country_ocean.country_id
-                LEFT JOIN oceans ON oceans.ocean_id = country_ocean.ocean_id
                 """)
         self.shipwrecks = c.fetchall()
         
@@ -477,6 +362,10 @@ class MapWindow(QWidget):
         self.year2_input.clear()
         self.name_input.clear()
 
+        self.oceans_input.blockSignals(True) # These prevent maximum recursion depth 
+        self.countries_input.blockSignals(True)
+        self.local_input.blockSignals(True)
+
         for input_name in self.inputs:
             if input_name != "oceans" and input_name != "country" and input_name != "local":
                 input_widget = getattr(self, f"{input_name}_input")
@@ -490,4 +379,9 @@ class MapWindow(QWidget):
                     input_widget.addItem(item[1])
                 input_widget.setCurrentIndex(0)
                 input_widget.blockSignals(False)
+            
+        self.oceans_input.blockSignals(False)
+        self.countries_input.blockSignals(False)
+        self.local_input.blockSignals(False)
+                
         self.canvas.plot_shipwrecks(self.shipwrecks)
