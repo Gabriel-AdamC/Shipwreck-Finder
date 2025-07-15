@@ -2,11 +2,9 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget
 from map import MapWindow
 from data_entry import DataEntryWindow
 
-# TODO: finish form inputs
-# TODO: Make sure hierarchy works for the data entry as well
-# TODO: fix the country and ocean filtering. 
-            # The filtering logic at the bottom also needs a revamp then.
-            # although it may be fine, finish the form, add data and then check
+# TODO: handle hierarchy for wood
+# TODO: handle the data entry from the form
+# TODO: create lookup functions where i need ID and not name. i.e. country = SA but in db i say country_id = 3
 # TODO: Add districts
 
 # TODO: Add a page gui for data entry, so that you can add shipwrecks to the database
@@ -18,7 +16,12 @@ from data_entry import DataEntryWindow
 # TODO: Optimise the code in location_change() to avoid repetition
 # TODO: change countrys to countries on location_change(). Currently it doesnt work if it has countries for some reason.
 # TODO: implement districts in filters and hierarchy
-# TODO: change ocean to region
+# TODO: Do extensive testing on the hierarchy for locations, make sure that works 100%
+# TODO: Make it look nice
+
+# completed Today: fixed the hierarchy helper function so it works for both map_ui and data_entry
+#                  added all form inputs and made sure images works
+#                  started work on the form entry
 
 class MainWindow(QMainWindow):
     def __init__(self):
