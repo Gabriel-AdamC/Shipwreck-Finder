@@ -7,6 +7,8 @@ from data_entry import DataEntryWindow
 # TODO: create lookup functions where i need ID and not name. i.e. country = SA but in db i say country_id = 3
 # TODO: Add districts
 
+# TODO: currently a bug if i pick ocean and then all coean, all countries and local dissapear
+
 # TODO: Add a page gui for data entry, so that you can add shipwrecks to the database
 # TODO: Add a page gui for data editing, so that you can edit shipwrecks in the database
 # TODO: Add a page gui for data deletion, so that you can delete shipwrecks from the database
@@ -19,9 +21,7 @@ from data_entry import DataEntryWindow
 # TODO: Do extensive testing on the hierarchy for locations, make sure that works 100%
 # TODO: Make it look nice
 
-# completed Today: fixed the hierarchy helper function so it works for both map_ui and data_entry
-#                  added all form inputs and made sure images works
-#                  started work on the form entry
+# completed Today: 
 
 class MainWindow(QMainWindow):
     def __init__(self):

@@ -19,6 +19,7 @@ class DataEntryWindow(QWidget):
         layout = QVBoxLayout()
         self.setLayout(layout)
         self.entry_ui(layout)
+        self.selcted_images = []
 
     def entry_ui(self, layout):
         """ Set up the UI for data entry. """
@@ -235,81 +236,177 @@ class DataEntryWindow(QWidget):
         # copy the file
         shutil.copy2(filename, local_path)
 
+        # store the image for db insertion
+        self.selected_images.append(local_path)
+
     
     def submit(self):
         """ Handle the form submission by gathering non blank values """
         # dict to correlate form to db
         form_db = {
             # wrecks tab
-            "kraken_id": {"wrecks", "kraken_id"},
-            "ship_name": {"wrecks", "name"},
-            "year_lost": {"wrecks", "year_lost"},
-            "date_lost": {"wrecks", "date_lost"},
+            "kraken_id": ("wrecks", "kraken_id", None),
+            "ship_name": ("wrecks", "name", None),
+            "year_lost": ("wrecks", "year_lost", None),
+            "date_lost": ("wrecks", "date_lost", None),
             # location tab   
-            "ocean": {"locations", "ocean_id"},
-            "country": {"locations", "country_id"},
-            "district": {"locations", "district_id"},
-            "local_location": {"locations", "local_id"},
-            "details_of_location": {"locations", "details"},
-            "reported_coordinates": {"locations", "reported_coords"},
-            "coordinate_confidence": {"locations", "coord_conf"},
-            "verified_coordinates": {"locations", "verified_coords"},
-            "reported_depth": {"wrecks", "reported_depth"},
-            "latitude": {"wrecks", "y_coord"},
-            "longitude": {"wrecks", "x_coord"},
-            "coordinate_type": {"locations", "coord_type"},
+            "ocean": ("locations", "ocean_id", "oceans"),
+            "country": ("locations", "country_id", "countries"),
+            "district": ("locations", "district_id", "districts"),
+            "local_location": ("locations", "local_id", "local"),
+            "details_of_location": ("locations", "details", None),
+            "reported_coordinates": ("locations", "reported_coords", None),
+            "coordinate_confidence": ("locations", "coord_conf", "confidence"),
+            "verified_coordinates": ("locations", "verified_coords", None),
+            "reported_depth": ("wrecks", "reported_depth", None),
+            "latitude": ("wrecks", "y_coord", None),
+            "longitude": ("wrecks", "x_coord", None),
+            "coordinate_type": ("locations", "coord_type", "coord_type"),
             # materials tab
-            "material": QComboBox(),
-            "wood_type": QComboBox(),
-            "fastening": QComboBox(),
-            "sheathing": QComboBox(),
-            "armament": QLineEdit(),
-            "ship_purpose": QComboBox(),
-            "ship_type": QComboBox(), 
-            "tonnage": QLineEdit(),
-            "propulsion": QComboBox(),
-            "engine_type": QComboBox(),
-            "length": QLineEdit(),
-            "breadth": QLineEdit(), 
-            "hold_depth": QLineEdit(),
-            "build_year": QLineEdit(),
-            "builder": QLineEdit(),
-            "shipyard": QLineEdit(),
-            "ship_documents": QLineEdit(),
-            "other_details": QLineEdit(),
+            "material": ("builds", "material_id", "materials"),
+            "wood_type": ("builds", "wood_id", "wood_types"),
+            "fastening": ("builds", "fastening_id", "fastening"),
+            "sheathing": ("builds", "sheathing_id", "sheathing"),
+            "armament": ("extras", "armaments", None),
+            "ship_purpose": ("builds", "purpose_id", "purpose"),
+            "ship_type": ("builds", "type_id", "type"), 
+            "tonnage": ("extras", "tonnage", None),
+            "propulsion": ("builds", "propulsion_id", "propulsion"),
+            "engine_type": ("builds", "engine_id", "engines"),
+            "length": ("extras", "length", None),
+            "breadth": ("extras", "breadth", None), 
+            "hold_depth": ("extras", "hold_depth", None),
+            "build_year": ("extras", "build_year", None),
+            "builder": ("extras", "builder", None),
+            "shipyard": ("extras", "shipyard", None),
+            "ship_documents": ("builds", "ship_docs", None),
+            "other_details": ("builds", "ship_details", None),
             # wreck event tab
-            "sequence_of_events": QLineEdit(),
-            "historical_event": QLineEdit(),
-            "other_details": QLineEdit(),
+            "sequence_of_events": ("extras", "sequence_of_wreck", None),
+            "historical_event": ("extras", "historical_event", None),
+            "other_details": ("extras", "notes", None),
             # registration tab
-            "nation": QComboBox(),
-            "registered_port": QComboBox(),
-            "registration_number": QLineEdit(),
-            "owners": QLineEdit(),
-            "previous_names": QLineEdit(),
-            "sahris_id": QLineEdit(),
+            "nation": ("extras", "nation", None),
+            "registered_port": ("wrecks", "registered_port", None),
+            "registration_number": ("extras", "registration_number", None),
+            "owners": ("extras", "owners", None),
+            "previous_names": ("extras", "previous_names", None),
+            "sahris_id": ("extras", "sahris_id", None),
             # personnel tab
-            "captain": QLineEdit(),
-            "commander": QLineEdit(),
-            "crew": QLineEdit(),
-            "passengers": QLineEdit(),
-            "number_aboard": QLineEdit(),
-            "casualties": QLineEdit(),
-            "burial_location": QLineEdit(),
+            "captain": ("extras", "captain", None),
+            "commander": ("extras", "commander", None),
+            "crew": ("extras", "crew", None),
+            "passengers": ("extras", "passengers", None),
+            "number_aboard": ("extras", "total_aboard", None),
+            "casualties": ("extras", "casualties", None),
+            "burial_location": ("wrecks", "burial_location", None),
             # archaeology tab
-            "archaeologists": QLineEdit(),
-            "artefacts": QLineEdit(),
-            "cargo": QLineEdit(),
-            "year_salvaged": QLineEdit(),
-            "salvor": QLineEdit(),
-            "other_details": QLineEdit(),
+            "archaeologists": ("extras", "archaeologist", None),
+            "artefacts": ("extras", "artefacts", None),
+            "cargo": ("voyage", "cargo", None),
+            "year_salvaged": ("extras", "year_salvaged", None),
+            "salvor": ("extras", "salvor", None),
+            "other_details": ("misc", "details", None),
             # sources tab
-            "images": QPushButton("Add Photos"),
-            "caption": QLineEdit(),
-            "other_sources": QLineEdit()
+            "images": ("images", "image_path", "multiple", None),
+            "caption": ("images", "caption", None),
+            "other_sources": ("images", "source", None)
         }
 
+        #TODO I need to iterate and store in a list.
+        # first locations
+            # if mapping[2] == None: continue
+            # else lookup id with mapping[2]
+            # at the end store the locations id
+        # then builds
+            # same as above
+        # then wrecks
+            # same as above but insert into builds and locations their respective ids
+        # then the rest using the above
+            # same as above but with ship_id
 
+        # most tables need ship_id, so I need to do wrecks sooner than most tables,
+        # but wrecks needs locations_row_ID and builds_id
+        # so I need to do those first. Hence the order of the code below
+
+        #TODO:fix the iteration, currently creates a ton of items for each iteration, rather than 1
+        # Do the logic
+        # add items
+        first = ["wrecks", "locations", "builds"]
+
+        for section_name, fields in self.sections.items():
+            wrecks = {}
+            locations = {}
+            builds = {}
+            rest = {}
+            for key, widget in fields.items():
+
+                if key in form_db:
+                    table, column, lookup = form_db[key][:3]
+
+                    value = self.get_widget_value(widget, key)
+                    if value:
+                        if lookup:
+                            value = self.get_id_by_name(value, lookup)
+                        if table == "wrecks":
+                            wrecks[column] = value
+                        elif table == "locations":
+                            locations[column] = value
+                        elif table == "builds":
+                            builds[column] = value
+                        else:
+                            if table not in rest:
+                                rest[table] = {}
+                            rest[table][column] = value
+                    print(wrecks)
+                    print(rest)
+                
+                    if key == "images":
+                        if self.selcted_images:
+                            mapping = form_db[key]
+                            table = mapping[0]
+                            column = mapping[1]
+
+                            # there could be multiple images, so loop through all of them
+                            for image_path in self.selcted_images:
+                                query = f"INSERT INTO {table} ({column}) VALUES {image_path}"
+                                conn = sqlite3.connect("shipwrecks.db")
+                                c = conn.cursor()
+                                c.execute(query)
+                                continue
+
+                if key in form_db:
+                    mapping = form_db[key]
+                    table = mapping[0]
+                    column = mapping[1]
+
+                    query = f"INSERT INTO {table} ({column}) VALUES {value}"
+
+                    conn = sqlite3.connect("shipwrecks.db")
+                    c = conn.cursor()
+                    c.execute(query)
+
+
+    def get_widget_value(self, widget, key):
+        if isinstance(widget, QLineEdit):
+            if widget.text() != "":
+                value = widget.text()
+                return value
+
+        elif isinstance(widget, QComboBox):
+            if widget.currentText() != "":
+                value = widget.currentText()
+                return value
+            
+
+    def get_id_by_name(self, value, lookup):
+        conn = sqlite3.connect("shipwrecks.db")
+        c = conn.cursor()
+        c.execute("""SELECT * FROM ?""", lookup)
+        data = c.fetchall()
+        for i in data:
+            if isinstance(i, int): # every lookup table has a nam and id, each name is always different, but each id is always an int
+                return i 
 
     
     def hierarchy(self, source):

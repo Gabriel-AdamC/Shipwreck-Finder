@@ -16,9 +16,10 @@ dist/
 # VS Code files
 .vscode/
 
-# Database file
+# Specific files
 shipwrecks.db
 .venv
+images
 
 # MacOS files
 .DS_Store
