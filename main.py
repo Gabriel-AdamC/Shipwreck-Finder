@@ -3,8 +3,7 @@ from map import MapWindow
 from data_entry import DataEntryWindow
 
 # TODO: handle hierarchy for wood
-# TODO: handle the data entry from the form
-# TODO: create lookup functions where i need ID and not name. i.e. country = SA but in db i say country_id = 3
+# TODO: handle line 50 in map.py
 # TODO: Add districts
 
 # TODO: currently a bug if i pick ocean and then all coean, all countries and local dissapear

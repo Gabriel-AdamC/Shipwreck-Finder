@@ -9,6 +9,10 @@ from PyQt5.QtCore import pyqtSignal, QDir
 import sqlite3
 from helpers import location_change, get_country_id_by_name, get_ocean_id_by_name
 
+
+#TODO: ADD TRADE ROUTES TO DDATA ENTRY
+
+
 class DataEntryWindow(QWidget):
 
     switch_signal = pyqtSignal(str)
@@ -329,16 +333,17 @@ class DataEntryWindow(QWidget):
         # but wrecks needs locations_row_ID and builds_id
         # so I need to do those first. Hence the order of the code below
 
-        #TODO:fix the iteration, currently creates a ton of items for each iteration, rather than 1
-        # Do the logic
-        # add items
-        first = ["wrecks", "locations", "builds"]
+        #TODO:Make it work with NOT NULL items. 
+        wrecks = {}
+        locations = {}
+        builds = {}
+        rest = {}
+        location_id =None
+        build_id = None
+        ship_id = None
 
         for section_name, fields in self.sections.items():
-            wrecks = {}
-            locations = {}
-            builds = {}
-            rest = {}
+            
             for key, widget in fields.items():
 
                 if key in form_db:
@@ -358,33 +363,67 @@ class DataEntryWindow(QWidget):
                             if table not in rest:
                                 rest[table] = {}
                             rest[table][column] = value
-                    print(wrecks)
-                    print(rest)
-                
-                    if key == "images":
-                        if self.selcted_images:
-                            mapping = form_db[key]
-                            table = mapping[0]
-                            column = mapping[1]
+        
+        if locations:
+            columns = ", ".join(locations.keys()) # creates a list of column names
+            placeholders = ", ".join(["?" for _ in locations]) # creates a list of ? to avoid sql injection
+            values = tuple(locations.values()) # creates a tuple of all the data
 
-                            # there could be multiple images, so loop through all of them
-                            for image_path in self.selcted_images:
-                                query = f"INSERT INTO {table} ({column}) VALUES {image_path}"
-                                conn = sqlite3.connect("shipwrecks.db")
-                                c = conn.cursor()
-                                c.execute(query)
-                                continue
+            query = f"INSERT INTO locations ({columns}) VALUES ({placeholders})"
+            conn = sqlite3.connect("shipwrecks.db")
+            c = conn.cursor()
+            c.execute(query, values)
+            location_row_ID = c.lastrowid
+            conn.commit()
+            conn.close()
 
-                if key in form_db:
-                    mapping = form_db[key]
-                    table = mapping[0]
-                    column = mapping[1]
+        if builds:
+            columns = ", ".join(builds.keys())
+            placeholders = ", ".join(["?" for _ in builds])
+            values = tuple(builds.values())
 
-                    query = f"INSERT INTO {table} ({column}) VALUES {value}"
+            query = f"INSERT INTO builds ({columns}) VALUES ({placeholders})"
+            conn = sqlite3.connect("shipwrecks.db")
+            c = conn.cursor()
+            c.execute(query, values)
+            build_id = c.lastrowid
+            conn.commit()
+            conn.close()
+
+        if wrecks:
+            build_id = build_id if build_id is not None else 0 # oceans always has to be inputted, but builds is optional
+            columns = ", ".join(wrecks.keys())
+            placeholders = ", ".join(["?" for _ in wrecks])
+            values = tuple(wrecks.values())
+
+            query = f"INSERT INTO wrecks ({columns}, build_id, location_row_ID) VALUES ({placeholders}, ?, ?)"
+            conn = sqlite3.connect("shipwrecks.db")
+            c = conn.cursor()
+            c.execute(query, values + (build_id, location_row_ID))
+            ship_id = c.lastrowid
+            conn.commit()
+            conn.close()
+
+        if rest:
+            for table_name, table_data in rest.items():
+                if table_data:
+                    columns = ", ".join(table_data.keys())
+                    placeholders = ", ".join(["?" for _ in table_data])
+                    values = tuple(table_data.values())
+
+                    query = f"INSERT INTO {table_name} ({columns}, ship_id) VALUES ({placeholders}, ?)"
 
                     conn = sqlite3.connect("shipwrecks.db")
                     c = conn.cursor()
-                    c.execute(query)
+                    c.execute(query, values + (ship_id,))
+
+                    conn.commit()
+                    conn.close()
+
+                        
+
+                
+                    
 
 
     def get_widget_value(self, widget, key):
@@ -402,11 +441,14 @@ class DataEntryWindow(QWidget):
     def get_id_by_name(self, value, lookup):
         conn = sqlite3.connect("shipwrecks.db")
         c = conn.cursor()
-        c.execute("""SELECT * FROM ?""", lookup)
+        c.execute(f"SELECT * FROM {lookup}")
         data = c.fetchall()
-        for i in data:
-            if isinstance(i, int): # every lookup table has a nam and id, each name is always different, but each id is always an int
-                return i 
+        for row in data:
+            if value in row:
+                for field in row:
+                    if isinstance(field, int):
+                        conn.close()
+                        return field 
 
     
     def hierarchy(self, source):
