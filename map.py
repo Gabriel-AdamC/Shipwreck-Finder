@@ -47,9 +47,8 @@ class ShipwreckMapCanvas(FigureCanvas):
 
         # TODO: update logic to plot based off most accurate data
         # i.e. if coords, use, else if local, use that, else if ocean, use that
-        for name, lat, lon, id, year, mat_id, mat, local, ocean, country, prop_id, prop, sheath_id, sheath, fast_id, fast, purp_id, purp, type_id, type, por2_id, por2, por4_id, por4, trad_id, trad, ctpye_id, ctype, con_id, con, wood_id, wood in wrecks:
+        for name, lat, lon, id, year, mat_id, mat, local, ocean, country, prop_id, prop, sheath_id, sheath, fast_id, fast, purp_id, purp, type_id, type, por2_id, por2, por4_id, por4, trad_id, trad, ctpye_id, ctype, con_id, con, wood_id, wood, co_oc_co_id, co_oc_oc_id in wrecks:
             self.ax.plot(lon, lat, 'ro')
-        #print(wrecks)  # Debugging line to check the wrecks being plotted 
 
         self.draw()
 
@@ -62,7 +61,7 @@ class MapWindow(QWidget):
     # list of inputs for the dropdowns and filters
     # these are used to dynamically create the dropdowns in the UI
     inputs = [
-        "coord_type", "confidence", "port2", "port4", "trade_routes", "oceans", "countries",
+        "coord_type", "confidence", "port2", "port4", "trade_routes", "oceans", "countries", "districts",
         "local", "sheathing", "type", "fastening", "purpose", "propulsion", "materials"
     ]
 
@@ -83,6 +82,7 @@ class MapWindow(QWidget):
         #load the materials for the materials dropdown
         self.load_lists()
 
+        # buttons to change the page view
         self.page_change = QHBoxLayout()
         self.btn_map = QPushButton("Map")
         self.btn_map.clicked.connect(lambda: self.switch_signal.emit("map"))
@@ -265,7 +265,11 @@ class MapWindow(QWidget):
                 LEFT JOIN confidence ON misc.confidence = confidence.id
                 LEFT JOIN wood_types ON builds.wood_id = wood_types.wood_id
                 """)
-        self.shipwrecks = c.fetchall()
+        shipwrecks = c.fetchall()
+        conn.close()
+    
+        self.shipwrecks = shipwrecks
+        return shipwrecks
         
 
     def load_lists(self):
@@ -299,8 +303,8 @@ class MapWindow(QWidget):
             "port2": 21,        
             "port4": 23,        
             "trade_routes": 25,
-            "oceans": 8,
-            "countries": 9,
+            "oceans": 33,
+            "countries": 32,
             "local": 7,
             "sheathing": 13,
             "type": 19,
@@ -383,5 +387,8 @@ class MapWindow(QWidget):
         self.oceans_input.blockSignals(False)
         self.countries_input.blockSignals(False)
         self.local_input.blockSignals(False)
+
+        # get the new list of wrecks for if user adds to the database
+        new = self.load_data()
                 
-        self.canvas.plot_shipwrecks(self.shipwrecks)
+        self.canvas.plot_shipwrecks(new)

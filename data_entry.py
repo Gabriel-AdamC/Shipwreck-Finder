@@ -4,13 +4,13 @@ import uuid
 from PyQt5.QtWidgets import (
       QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout,
       QTabWidget, QLineEdit, QComboBox, QFormLayout,
-      QFileDialog)
+      QFileDialog, QDialog)
 from PyQt5.QtCore import pyqtSignal, QDir
 import sqlite3
 from helpers import location_change, get_country_id_by_name, get_ocean_id_by_name
+from dicts import sections, boxes_dict, input_dict
 
-
-#TODO: ADD TRADE ROUTES TO DDATA ENTRY
+# TODO: images table is not capturing the caption or the source, only the path
 
 
 class DataEntryWindow(QWidget):
@@ -23,7 +23,7 @@ class DataEntryWindow(QWidget):
         layout = QVBoxLayout()
         self.setLayout(layout)
         self.entry_ui(layout)
-        self.selcted_images = []
+        self.selected_images = []
 
     def entry_ui(self, layout):
         """ Set up the UI for data entry. """
@@ -39,102 +39,10 @@ class DataEntryWindow(QWidget):
 
         # I want to loop through the form inputs, so that I can avoid hardcoding each one.
         # So here is a dict of all the info I need to effectively loop and dynamically create
-        self.sections = {
-            "wreck": {
-                "kraken_id": QLineEdit(),
-                "ship_name": QLineEdit(),
-                "year_lost": QLineEdit(),
-                "date_lost": QLineEdit()
-            },
-            "location": {
-                "ocean": QComboBox(),
-                "country": QComboBox(),
-                "district": QComboBox(),
-                "local_location": QComboBox(),
-                "details_of_location": QLineEdit(),
-                "reported_coordinates": QLineEdit(),
-                "coordinate_confidence": QComboBox(),
-                "verified_coordinates": QLineEdit(),
-                "reported_depth": QLineEdit(),
-                "latitude": QLineEdit(),
-                "longitude": QLineEdit(),
-                "coordinate_type": QComboBox()
-            },
-            "construction": {
-                "material": QComboBox(),
-                "wood_type": QComboBox(),
-                "fastening": QComboBox(),
-                "sheathing": QComboBox(),
-                "armament": QLineEdit(),
-                "ship_purpose": QComboBox(),
-                "ship_type": QComboBox(),
-                "tonnage": QLineEdit(),
-                "propulsion": QComboBox(),
-                "engine_type": QComboBox(),
-                "length": QLineEdit(),
-                "breadth": QLineEdit(),
-                "hold_depth": QLineEdit(),
-                "build_year": QLineEdit(),
-                "builder": QLineEdit(),
-                "shipyard": QLineEdit(),
-                "ship_documents": QLineEdit(),
-                "other_details": QLineEdit()
-            },
-            "wreck_event": {
-                "sequence_of_events": QLineEdit(),
-                "historical_event": QLineEdit(),
-                "other_details": QLineEdit()
-            },
-            "registration": {
-                "nation": QComboBox(),
-                "registered_port": QComboBox(),
-                "registration_number": QLineEdit(),
-                "owners": QLineEdit(),
-                "previous_names": QLineEdit(),
-                "sahris_id": QLineEdit()
-            },
-            "personnel": {
-                "captain": QLineEdit(),
-                "commander": QLineEdit(),
-                "crew": QLineEdit(),
-                "passengers": QLineEdit(),
-                "number_aboard": QLineEdit(),
-                "casualties": QLineEdit(),
-                "burial_location": QLineEdit()
-            },
-            "archaeology": {
-                "archaeologists": QLineEdit(),
-                "artefacts": QLineEdit(),
-                "cargo": QLineEdit(),
-                "year_salvaged": QLineEdit(),
-                "salvor": QLineEdit(),
-                "other_details": QLineEdit()
-            },
-            "sources": {
-                "images": QPushButton("Add Photos"),
-                "caption": QLineEdit(),
-                "other_sources": QLineEdit()
-            }
-        }
+        self.sections = sections()
 
         # a dict that shows what data to get, and where, based on the form
-        boxes = {
-            "ocean": ["ocean_id, ocean_name", "oceans"],
-            "country": ["country_id, country_name", "countries"],
-            "district": ["district_id, district_name", "districts"],
-            "local_location": ["local_id, local_name, country_id", "local"],
-            "coordinate_confidence": ["confidence", "confidence"],
-            "material": ["material_name", "materials"],
-            "wood_type": ["name", "wood_types"],
-            "fastening": ["fastening_name", "fastening"],
-            "sheathing": ["sheathing_name", "sheathing"],
-            "ship_purpose": ["reason", "purpose"],
-            "ship_type": ["type_name", "type"],
-            "propulsion": ["propulsion_name", "propulsion"],
-            "engine_type": ["engine_name", "engines"],
-            "nation": ["nation", "extras"],
-            "registered_port": ["registered_port", "wrecks"]
-        }
+        boxes = boxes_dict()
 
         location_keys = {
             "ocean": "oceans",
@@ -240,190 +148,176 @@ class DataEntryWindow(QWidget):
         # copy the file
         shutil.copy2(filename, local_path)
 
-        # store the image for db insertion
-        self.selected_images.append(local_path)
+        caption = self.caption_input.text() if hasattr(self, 'caption_input') else ""
+        source = self.source_input.text() if hasattr(self, 'source_input') else ""
+    
+        # Store the complete image data for db insertion
+        image_data = {
+            'image_path': local_path,
+            'caption': caption,
+            'source': source
+        }
+    
+        if not hasattr(self, 'selected_images'):
+            self.selected_images = []
+        self.selected_images.append(image_data)
 
     
     def submit(self):
         """ Handle the form submission by gathering non blank values """
         # dict to correlate form to db
-        form_db = {
-            # wrecks tab
-            "kraken_id": ("wrecks", "kraken_id", None),
-            "ship_name": ("wrecks", "name", None),
-            "year_lost": ("wrecks", "year_lost", None),
-            "date_lost": ("wrecks", "date_lost", None),
-            # location tab   
-            "ocean": ("locations", "ocean_id", "oceans"),
-            "country": ("locations", "country_id", "countries"),
-            "district": ("locations", "district_id", "districts"),
-            "local_location": ("locations", "local_id", "local"),
-            "details_of_location": ("locations", "details", None),
-            "reported_coordinates": ("locations", "reported_coords", None),
-            "coordinate_confidence": ("locations", "coord_conf", "confidence"),
-            "verified_coordinates": ("locations", "verified_coords", None),
-            "reported_depth": ("wrecks", "reported_depth", None),
-            "latitude": ("wrecks", "y_coord", None),
-            "longitude": ("wrecks", "x_coord", None),
-            "coordinate_type": ("locations", "coord_type", "coord_type"),
-            # materials tab
-            "material": ("builds", "material_id", "materials"),
-            "wood_type": ("builds", "wood_id", "wood_types"),
-            "fastening": ("builds", "fastening_id", "fastening"),
-            "sheathing": ("builds", "sheathing_id", "sheathing"),
-            "armament": ("extras", "armaments", None),
-            "ship_purpose": ("builds", "purpose_id", "purpose"),
-            "ship_type": ("builds", "type_id", "type"), 
-            "tonnage": ("extras", "tonnage", None),
-            "propulsion": ("builds", "propulsion_id", "propulsion"),
-            "engine_type": ("builds", "engine_id", "engines"),
-            "length": ("extras", "length", None),
-            "breadth": ("extras", "breadth", None), 
-            "hold_depth": ("extras", "hold_depth", None),
-            "build_year": ("extras", "build_year", None),
-            "builder": ("extras", "builder", None),
-            "shipyard": ("extras", "shipyard", None),
-            "ship_documents": ("builds", "ship_docs", None),
-            "other_details": ("builds", "ship_details", None),
-            # wreck event tab
-            "sequence_of_events": ("extras", "sequence_of_wreck", None),
-            "historical_event": ("extras", "historical_event", None),
-            "other_details": ("extras", "notes", None),
-            # registration tab
-            "nation": ("extras", "nation", None),
-            "registered_port": ("wrecks", "registered_port", None),
-            "registration_number": ("extras", "registration_number", None),
-            "owners": ("extras", "owners", None),
-            "previous_names": ("extras", "previous_names", None),
-            "sahris_id": ("extras", "sahris_id", None),
-            # personnel tab
-            "captain": ("extras", "captain", None),
-            "commander": ("extras", "commander", None),
-            "crew": ("extras", "crew", None),
-            "passengers": ("extras", "passengers", None),
-            "number_aboard": ("extras", "total_aboard", None),
-            "casualties": ("extras", "casualties", None),
-            "burial_location": ("wrecks", "burial_location", None),
-            # archaeology tab
-            "archaeologists": ("extras", "archaeologist", None),
-            "artefacts": ("extras", "artefacts", None),
-            "cargo": ("voyage", "cargo", None),
-            "year_salvaged": ("extras", "year_salvaged", None),
-            "salvor": ("extras", "salvor", None),
-            "other_details": ("misc", "details", None),
-            # sources tab
-            "images": ("images", "image_path", "multiple", None),
-            "caption": ("images", "caption", None),
-            "other_sources": ("images", "source", None)
-        }
-
-        #TODO I need to iterate and store in a list.
-        # first locations
-            # if mapping[2] == None: continue
-            # else lookup id with mapping[2]
-            # at the end store the locations id
-        # then builds
-            # same as above
-        # then wrecks
-            # same as above but insert into builds and locations their respective ids
-        # then the rest using the above
-            # same as above but with ship_id
+        form_db = input_dict()
 
         # most tables need ship_id, so I need to do wrecks sooner than most tables,
         # but wrecks needs locations_row_ID and builds_id
         # so I need to do those first. Hence the order of the code below
+ 
+        conn = None
 
-        #TODO:Make it work with NOT NULL items. 
-        wrecks = {}
-        locations = {}
-        builds = {}
-        rest = {}
-        location_id =None
-        build_id = None
-        ship_id = None
-
-        for section_name, fields in self.sections.items():
+        try:
             
-            for key, widget in fields.items():
+            conn = sqlite3.connect("shipwrecks.db")
+            c = conn.cursor()
+            
+            wrecks = {}
+            locations = {}
+            builds = {}
+            rest = {}
+            location_id =None
+            build_id = None
+            ship_id = None
 
-                if key in form_db:
-                    table, column, lookup = form_db[key][:3]
+            for section_name, fields in self.sections.items():
+            
+                for key, widget in fields.items():
 
-                    value = self.get_widget_value(widget, key)
-                    if value:
-                        if lookup:
-                            value = self.get_id_by_name(value, lookup)
-                        if table == "wrecks":
-                            wrecks[column] = value
-                        elif table == "locations":
-                            locations[column] = value
-                        elif table == "builds":
-                            builds[column] = value
-                        else:
-                            if table not in rest:
-                                rest[table] = {}
-                            rest[table][column] = value
+                    if key in form_db:
+                        table, column, lookup = form_db[key][:3]
+                        value = self.get_widget_value(widget, key)
+
+                        if value:
+                            if lookup:
+                                value = self.get_id_by_name(value, lookup)
+                            if table == "wrecks":
+                                wrecks[column] = value
+                            elif table == "locations":
+                                locations[column] = value
+                            elif table == "builds":
+                                builds[column] = value
+                            else:
+                                if table not in rest:
+                                    rest[table] = {}
+                                rest[table][column] = value
         
-        if locations:
-            columns = ", ".join(locations.keys()) # creates a list of column names
-            placeholders = ", ".join(["?" for _ in locations]) # creates a list of ? to avoid sql injection
-            values = tuple(locations.values()) # creates a tuple of all the data
+            if locations:
+                columns = ", ".join(locations.keys()) # creates a list of column names
+                placeholders = ", ".join(["?" for _ in locations]) # creates a list of ? to avoid sql injection
+                values = tuple(locations.values()) # creates a tuple of all the data
+                query = f"INSERT INTO locations ({columns}) VALUES ({placeholders})"
+                c.execute(query, values)
+                location_row_ID = c.lastrowid
 
-            query = f"INSERT INTO locations ({columns}) VALUES ({placeholders})"
-            conn = sqlite3.connect("shipwrecks.db")
-            c = conn.cursor()
-            c.execute(query, values)
-            location_row_ID = c.lastrowid
-            conn.commit()
-            conn.close()
+            if builds:
+                columns = ", ".join(builds.keys())
+                placeholders = ", ".join(["?" for _ in builds])
+                values = tuple(builds.values())
+                query = f"INSERT INTO builds ({columns}) VALUES ({placeholders})"
+                c.execute(query, values)
+                build_id = c.lastrowid
 
-        if builds:
-            columns = ", ".join(builds.keys())
-            placeholders = ", ".join(["?" for _ in builds])
-            values = tuple(builds.values())
+            if wrecks:
+                build_id = build_id if build_id is not None else 0 # oceans always has to be inputted, but builds is optional
+                columns = ", ".join(wrecks.keys())
+                placeholders = ", ".join(["?" for _ in wrecks])
+                values = tuple(wrecks.values())
+                query = f"INSERT INTO wrecks ({columns}, build_id, location_row_ID) VALUES ({placeholders}, ?, ?)"
+                c.execute(query, values + (build_id, location_row_ID))
+                ship_id = c.lastrowid
 
-            query = f"INSERT INTO builds ({columns}) VALUES ({placeholders})"
-            conn = sqlite3.connect("shipwrecks.db")
-            c = conn.cursor()
-            c.execute(query, values)
-            build_id = c.lastrowid
-            conn.commit()
-            conn.close()
+            if rest:
+                for table_name, table_data in rest.items():
+                    print(table_name, table_data)
+                    if table_data:
+                        if table_name == "images" and hasattr(self, "selected_images") and self.selected_images:
 
-        if wrecks:
-            build_id = build_id if build_id is not None else 0 # oceans always has to be inputted, but builds is optional
-            columns = ", ".join(wrecks.keys())
-            placeholders = ", ".join(["?" for _ in wrecks])
-            values = tuple(wrecks.values())
-
-            query = f"INSERT INTO wrecks ({columns}, build_id, location_row_ID) VALUES ({placeholders}, ?, ?)"
-            conn = sqlite3.connect("shipwrecks.db")
-            c = conn.cursor()
-            c.execute(query, values + (build_id, location_row_ID))
-            ship_id = c.lastrowid
-            conn.commit()
-            conn.close()
-
-        if rest:
-            for table_name, table_data in rest.items():
-                if table_data:
-                    columns = ", ".join(table_data.keys())
-                    placeholders = ", ".join(["?" for _ in table_data])
-                    values = tuple(table_data.values())
-
-                    query = f"INSERT INTO {table_name} ({columns}, ship_id) VALUES ({placeholders}, ?)"
-
-                    conn = sqlite3.connect("shipwrecks.db")
-                    c = conn.cursor()
-                    c.execute(query, values + (ship_id,))
-
-                    conn.commit()
-                    conn.close()
-
-                        
-
-                
+                            current_caption = self.caption_input.text() if hasattr(self, "caption_input") else "nope"
+                            current_source = self.source_input.text() if hasattr(self, "source_input") else "nope" 
                     
+                            # Insert each image with all its metadata
+                            for image_data in self.selected_images:
+                                query = "INSERT INTO images (image_path, caption, source, ship_id) VALUES (?, ?, ?, ?)"
+                                c.execute(query, (
+                                    image_data['image_path'],
+                                    current_caption,
+                                    current_source,
+                                    ship_id
+                                ))
+                    
+                            # Clear selected images after insertion
+                            self.selected_images.clear()
+                            continue
+
+                        columns = ", ".join(table_data.keys())
+                        placeholders = ", ".join(["?" for _ in table_data])
+                        values = tuple(table_data.values())
+
+                        query = f"INSERT INTO {table_name} ({columns}, ship_id) VALUES ({placeholders}, ?)"
+                        c.execute(query, values + (ship_id,))
+
+            conn.commit()
+        
+            # Clear form inputs after submission
+            self.reset_fields()
+            # send an alert to the user
+            self.submit_message()
+
+        except sqlite3.Error as e:
+            if conn:
+                conn.rollback()
+                self.error(e)
+        
+        except Exception as e:
+            if conn:
+                conn.rollback()
+                self.error(e)
+
+        finally:
+            if conn:
+                conn.close()
+
+    
+    def error(self, e):
+        msg = QLabel("There was an error submitting the data. Please try again.")
+        msg2 = QLabel("error: " + str(e))
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Submission Error")
+        error_layout = QVBoxLayout()
+        error_layout.addWidget(msg)
+        error_layout.addWidget(msg2)
+        dlg.setLayout(error_layout)
+        dlg.exec_()
+
+    
+    def submit_message(self):
+        msg = QLabel("Data submitted successfully!")
+        msg2 = QLabel("Please click reset on the map page to see the new data")
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Submission Successful")
+        final_layout = QVBoxLayout()
+        final_layout.addWidget(msg)
+        final_layout.addWidget(msg2)
+        dlg.setLayout(final_layout)
+        dlg.exec_()
+
+
+    def reset_fields(self):
+        """" resets all the inputs in the form"""
+        for section_name, fields in self.sections.items():
+            for key, widget in fields.items():
+                if isinstance(widget, QLineEdit):
+                    widget.clear()
+                elif isinstance(widget, QComboBox):
+                    widget.setCurrentIndex(0)
 
 
     def get_widget_value(self, widget, key):
