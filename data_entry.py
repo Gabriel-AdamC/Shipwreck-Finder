@@ -6,11 +6,10 @@ from PyQt5.QtWidgets import (
       QTabWidget, QLineEdit, QComboBox, QFormLayout,
       QFileDialog, QDialog)
 from PyQt5.QtCore import pyqtSignal, QDir
+from PyQt5.QtGui import QPixmap
 import sqlite3
 from helpers import location_change, get_country_id_by_name, get_ocean_id_by_name
 from dicts import sections, boxes_dict, input_dict
-
-# TODO: images table is not capturing the caption or the source, only the path
 
 
 class DataEntryWindow(QWidget):
@@ -24,6 +23,7 @@ class DataEntryWindow(QWidget):
         self.setLayout(layout)
         self.entry_ui(layout)
         self.selected_images = []
+        self.image_labels = []
 
     def entry_ui(self, layout):
         """ Set up the UI for data entry. """
@@ -63,10 +63,19 @@ class DataEntryWindow(QWidget):
             form_sections.addTab(tab, section_name)
 
             form = QFormLayout()
+
+            if section_name == "sources": # create a reference so I can place pixmaps 
+                self.sources_tab_layout = tab_layout
         
             for key, widget in fields.items(): # layout the inputs in each tab
                 if isinstance(widget, QComboBox): # if its a box, find the right places to gather data
                     if key in boxes:
+
+                        if key == "material":
+                            self.materials_input = widget
+                        if key == "wood_type":
+                            self.wood_types_input = widget
+
                         what = boxes[key][0] # what to gather
                         where = boxes[key][1] # where to gather
                         query = f"SELECT {what} FROM {where}" #create the query for the prompt
@@ -111,12 +120,19 @@ class DataEntryWindow(QWidget):
 
                 elif isinstance(widget, QLineEdit):
                     form.addRow(key.replace('_', ' ').capitalize(), widget)
+                    if key == "caption":
+                        self.caption_input = widget
+                    elif key == "other_sources": 
+                        self.source_input = widget
                 else: # the only other widget is a button
                     btn = QPushButton("Add Photos")
                     btn.clicked.connect(self.add_photo)
                     form.addRow(key, btn)
             
             tab_layout.addLayout(form)
+        
+        if hasattr(self, "materials_input") and hasattr(self, "wood_types_input"):
+            self.materials_input.currentTextChanged.connect(self.update_wood)
         
         submit = QPushButton("submit")
         warn = QLabel("Please only click submit once you have filled as much as you would like from EACH tab")
@@ -126,6 +142,20 @@ class DataEntryWindow(QWidget):
         layout.addWidget(submit)
 
         submit.clicked.connect(self.submit)
+
+
+    def update_wood(self, selected_material): # dynamically changes wood input table
+        self.wood_types_input.clear()
+        if selected_material.lower() == "wood":
+            self.wood_types_input.addItem("")  
+            # Query wood types from the database
+            conn = sqlite3.connect("shipwrecks.db")
+            c = conn.cursor()
+            c.execute("SELECT name FROM wood_types")
+            wood_types = c.fetchall()
+            conn.close()
+            for row in wood_types:
+                self.wood_types_input.addItem(row[0])
         
 
     def add_photo(self, filename=None):
@@ -157,6 +187,14 @@ class DataEntryWindow(QWidget):
             'caption': caption,
             'source': source
         }
+
+        # display the image onto the pixmap
+        pixmap = QPixmap()
+        pixmap.load(local_path)
+        label = QLabel()
+        label.setPixmap(pixmap.scaled(200, 200, aspectRatioMode=1))
+        self.sources_tab_layout.addWidget(label)
+        self.image_labels.append(label)
     
         if not hasattr(self, 'selected_images'):
             self.selected_images = []
@@ -235,13 +273,14 @@ class DataEntryWindow(QWidget):
                 ship_id = c.lastrowid
 
             if rest:
+                print(rest)
                 for table_name, table_data in rest.items():
                     print(table_name, table_data)
                     if table_data:
                         if table_name == "images" and hasattr(self, "selected_images") and self.selected_images:
 
-                            current_caption = self.caption_input.text() if hasattr(self, "caption_input") else "nope"
-                            current_source = self.source_input.text() if hasattr(self, "source_input") else "nope" 
+                            current_caption = self.caption_input.text() if hasattr(self, "caption_input") else ""
+                            current_source = self.source_input.text() if hasattr(self, "source_input") else "" 
                     
                             # Insert each image with all its metadata
                             for image_data in self.selected_images:
@@ -318,6 +357,9 @@ class DataEntryWindow(QWidget):
                     widget.clear()
                 elif isinstance(widget, QComboBox):
                     widget.setCurrentIndex(0)
+        for label in getattr(self, "image_labels", []):
+            label.deleteLater()
+        self.image_labels = []
 
 
     def get_widget_value(self, widget, key):

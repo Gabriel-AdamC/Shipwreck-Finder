@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (QLineEdit, QComboBox, QPushButton)
+from PyQt5.QtWidgets import (QLineEdit, QComboBox, QPushButton, QLabel)
 
 def sections():
     sections = {

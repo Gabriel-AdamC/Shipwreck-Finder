@@ -21,6 +21,7 @@ class ShipwreckMapCanvas(FigureCanvas):
         self.ax = self.fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
         self.setParent(parent)
         self.setup_plot()
+        self.cid = self.fig.canvas.mpl_connect("button_press_event", self.on_click)
 
     def setup_plot(self):
         self.ax.clear()
@@ -34,7 +35,7 @@ class ShipwreckMapCanvas(FigureCanvas):
         self.ax.set_ylabel("Latitude")
         self.ax.set_xlim(-180, 180)
         self.ax.set_ylim(-90, 90)
-        self.fig.tight_layout()
+        self.fig.tight_layout()     
 
         self.draw()
 
@@ -51,6 +52,28 @@ class ShipwreckMapCanvas(FigureCanvas):
             self.ax.plot(lon, lat, 'ro')
 
         self.draw()
+
+
+    def on_click(self, event):
+        """ Handle Click Events On The Map """
+        wreck_data = {}
+        xdata = event.xdata
+        ydata = event.ydata
+        wrecks = self.parent().load_data()
+        # Gather all wrecks in a radius around click
+        # loop through -t to t in x axis
+        for t in range(round(ydata - 2.0), round(ydata + 2.0)):
+            # loop through -p to p in y axis
+            for p in range(round(xdata - 2.0), round(xdata + 2.0)):
+                # if wrecks.x_coord and wrecks.y_coord match values t and p
+                if (t, p) in wrecks:
+                    wreck_data[(t, p)] = wrecks[(t, p)]
+                # add it to a dictionary 
+        print(wreck_data)
+
+        # send user to new page with those wrecks
+
+
 
 
 class MapWindow(QWidget):
@@ -107,7 +130,16 @@ class MapWindow(QWidget):
             combo = QComboBox()
             setattr(self, f"{i}_input", combo)
             if i != "port2" and i != "port4":
-                combo.addItem(f"All {i.capitalize()}s")  # Default options
+
+                if i == "countries":
+                    combo.addItem("All Countries")
+                elif i == "oceans":
+                    combo.addItem("All Oceans")
+                elif i == "local":
+                    combo.addItem("All Locals")
+                else:
+                    combo.addItem(f"All {i.capitalize()}s")  
+
                 for item in getattr(self, f"{i}", []):
                     combo.addItem(item[1])
                 combo.setPlaceholderText(f"{i.capitalize()} filter")
@@ -303,8 +335,8 @@ class MapWindow(QWidget):
             "port2": 21,        
             "port4": 23,        
             "trade_routes": 25,
-            "oceans": 33,
-            "countries": 32,
+            "oceans": 8,
+            "countries": 9,
             "local": 7,
             "sheathing": 13,
             "type": 19,
@@ -312,28 +344,36 @@ class MapWindow(QWidget):
             "purpose": 17,
             "propulsion": 11
         }
+        
         filtered = self.shipwrecks  # Start with all shipwrecks
-        counter = 0  # Counter to check if any filters are applied
+        filters = False  # Flag to check if any filter is applied
         exceptions = ["Port Destination", "Port Departed"]  # Special cases for ports
 
         for input_name, index in filter_field_indexes.items():
             input_widget = getattr(self, f"{input_name}_input")
             selected_text = input_widget.currentText().strip()
-            if selected_text != f"All {input_name.capitalize()}s":
+            
+            # Check if this is a "All ..." selection (meaning no filter should be applied)
+            is_all_selection = (
+                selected_text.startswith("All ") or 
+                selected_text in exceptions
+            )
+            
+            if not is_all_selection:
                 if selected_text in exceptions:
                     continue # Keep the filtered list as is
                 else:
-                    filtered = [w for w in filtered if selected_text == w[index]]
-                    counter += 1
-            elif counter != 0:
-                filtered = filtered # If no filter on current iteration, but filters in previous, we keep the filtered list as is
+                    filtered = [w for w in filtered if w[index] == selected_text]
+                    filters = True
+            elif filters == True:
+                continue
             else:
-                filtered = self.shipwrecks # If no filters are applied, reset to all shipwrecks
+                filtered = filtered
 
-        # unique filters that are not in the inputs list
+
         wood_type_filter = self.wood_types_input.currentText().strip() if hasattr(self, 'wood_types_input') else None
         if wood_type_filter and wood_type_filter != "All Wood Types":
-            filtered = [w for w in filtered if wood_type_filter == w[31]]
+            filtered = [w for w in filtered if w[31] is not None and wood_type_filter == w[31]]
 
         year_filter = self.year_input.text().strip()
         if year_filter:
@@ -345,17 +385,30 @@ class MapWindow(QWidget):
                 except ValueError:
                     print("Invalid year input. Please enter valid integers.")
                     return
-                filtered = [w for w in filtered if year_filter <= int(w[4]) <= year2_filter]
+                filtered = [w for w in filtered if w[4] is not None and year_filter <= int(w[4]) <= year2_filter]
             else:
-                filtered = [w for w in filtered if w[4] == year_filter]
+                try:
+                    year_filter = int(year_filter)
+                    filtered = [w for w in filtered if w[4] is not None and int(w[4]) == year_filter]
+                except ValueError:
+                    print("Invalid year input. Please enter valid integers.")
+                    return
         else:
             filtered = filtered  # If no year filter is applied, keep the filtered list as is
 
         name_filter = self.name_input.text().strip()
         if name_filter:
-            filtered = [w for w in filtered if name_filter.lower() in w[0].lower()]
+            filtered = [w for w in filtered if w[0] is not None and name_filter.lower() in w[0].lower()]
         else:
             filtered = filtered
+
+        seen = set()
+        deduped = []
+        for w in filtered:
+            key = (w[0], w[1], w[2])  
+            if key not in seen:
+                deduped.append(w)
+                seen.add(key)
 
         self.canvas.plot_shipwrecks(filtered)
 

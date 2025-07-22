@@ -2,14 +2,8 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget
 from map import MapWindow
 from data_entry import DataEntryWindow
 
-# TODO: the filter for ocean, country and local are not working
-
-# TODO: handle hierarchy for wood
 # TODO: Add districts
 
-# TODO: currently a bug if i pick ocean and then all coean, all countries and local dissapear
-
-# TODO: Add a page gui for data entry, so that you can add shipwrecks to the database
 # TODO: Add a page gui for data editing, so that you can edit shipwrecks in the database
 # TODO: Add a page gui for data deletion, so that you can delete shipwrecks from the database
 #           May face issues with auto-incrementing IDs, so may need to handle that in the database
@@ -20,6 +14,8 @@ from data_entry import DataEntryWindow
 # TODO: implement districts in filters and hierarchy
 # TODO: Do extensive testing on the hierarchy for locations, make sure that works 100%
 # TODO: Make it look nice
+
+# TODO: filters check for _ in name. so if I have "i" in name, "titanic", "ship" and anything with i show up
 
 # completed Today: 
 
