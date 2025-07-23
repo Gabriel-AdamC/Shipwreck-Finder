@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget
 from map import MapWindow
 from data_entry import DataEntryWindow
+from see_wreck import WreckInfoWindow
 
 # TODO: Add districts
 
@@ -27,6 +28,7 @@ class MainWindow(QMainWindow):
 
         self.data_entry_page = DataEntryWindow()
         self.map_page = MapWindow()
+        self.see_wreck_page = None
 
         self.stack.addWidget(self.map_page)
         self.stack.addWidget(self.data_entry_page)
@@ -36,11 +38,21 @@ class MainWindow(QMainWindow):
         self.map_page.switch_signal.connect(self.switch_page)
         self.data_entry_page.switch_signal.connect(self.switch_page)
 
-    def switch_page(self, page_name):
+
+    def switch_page(self, page_name, data=None):
         if page_name == "data_entry":
             self.stack.setCurrentWidget(self.data_entry_page)
         elif page_name == "map":
             self.stack.setCurrentWidget(self.map_page)
+        elif page_name == "see_wreck":
+            if self.see_wreck_page:
+                self.stack.removeWidget(self.see_wreck_page)
+                self.see_wreck_page.deleteLater()
+            
+            self.see_wreck_page = WreckInfoWindow(data)
+            self.stack.addWidget(self.see_wreck_page)
+            self.see_wreck_page.switch_signal.connect(self.switch_page)
+            self.stack.setCurrentWidget(self.see_wreck_page)
 
 
 app = QApplication([])

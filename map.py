@@ -3,8 +3,8 @@ import sqlite3
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QGridLayout, QPushButton,
-    QLineEdit, QLabel, QComboBox, QHBoxLayout
+    QWidget, QVBoxLayout, QGridLayout, QPushButton, QMessageBox,
+    QLineEdit, QLabel, QComboBox, QHBoxLayout, QDialog, QDialogButtonBox
 )
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavBar
@@ -15,6 +15,8 @@ from PyQt5.QtCore import pyqtSignal
 from helpers import (location_change, get_country_id_by_name, get_ocean_id_by_name)
 
 class ShipwreckMapCanvas(FigureCanvas):
+    switch_signal = pyqtSignal(str, object)
+
     def __init__(self, parent=None, width=8, height=6, dpi=100):
         self.fig = plt.figure(figsize=(10, 5))
         super().__init__(self.fig)
@@ -59,19 +61,56 @@ class ShipwreckMapCanvas(FigureCanvas):
         wreck_data = {}
         xdata = event.xdata
         ydata = event.ydata
-        wrecks = self.parent().load_data()
-        # Gather all wrecks in a radius around click
-        # loop through -t to t in x axis
-        for t in range(round(ydata - 2.0), round(ydata + 2.0)):
-            # loop through -p to p in y axis
-            for p in range(round(xdata - 2.0), round(xdata + 2.0)):
-                # if wrecks.x_coord and wrecks.y_coord match values t and p
-                if (t, p) in wrecks:
-                    wreck_data[(t, p)] = wrecks[(t, p)]
-                # add it to a dictionary 
-        print(wreck_data)
+        wrecks = self.load_basic_data()
+
+        radius = 2.0 # check around the click
+
+        for wreck in wrecks:
+            wreck_lon = float(wreck[2])
+            wreck_lat = float(wreck[1])
+
+            # is this wreck by the click?
+            if (abs(wreck_lon - xdata) <= radius and abs(wreck_lat - ydata) <= radius):
+                wreck_data[(wreck_lon, wreck_lat)] = wreck
 
         # send user to new page with those wrecks
+        if wreck_data:
+            self.view_wreck(wreck_data)
+        
+
+
+    def view_wreck(self, wreck_data):
+        """ Promts User To Take Them To A New Page With The Info Of Clicked Wreck """
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Move to Wreck Info?")
+        msg = QLabel("Would you like to view the wreck information for the clicked pin?")
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(lambda: self.accept(dlg, wreck_data))
+        buttons.rejected.connect(dlg.reject)
+        mes_layout = QVBoxLayout()
+        mes_layout.addWidget(msg)
+        mes_layout.addWidget(buttons)
+        dlg.setLayout(mes_layout)
+        return dlg.exec_()
+
+
+    def accept(self, dlg, wreck_data):
+        dlg.accept()
+        # emit signal
+        self.switch_signal.emit("see_wreck", wreck_data)
+
+
+    def load_basic_data(self):
+        """ Load Only Neccassary Data For Map Click Check """
+        conn = sqlite3.connect("shipwrecks.db")
+        c = conn.cursor()
+        c.execute("""
+            SELECT name, x_coord, y_coord
+            FROM wrecks
+        """)
+        basics = c.fetchall()
+        conn.close()
+        return basics
 
 
 
@@ -79,7 +118,7 @@ class ShipwreckMapCanvas(FigureCanvas):
 class MapWindow(QWidget):
 
     # This signal is emitted when the map is switched to the data entry page
-    switch_signal = pyqtSignal(str)
+    switch_signal = pyqtSignal(str, object)
 
     # list of inputs for the dropdowns and filters
     # these are used to dynamically create the dropdowns in the UI
@@ -108,9 +147,9 @@ class MapWindow(QWidget):
         # buttons to change the page view
         self.page_change = QHBoxLayout()
         self.btn_map = QPushButton("Map")
-        self.btn_map.clicked.connect(lambda: self.switch_signal.emit("map"))
+        self.btn_map.clicked.connect(lambda: self.switch_signal.emit("map", None))
         self.btn_entry = QPushButton("Data Entry")
-        self.btn_entry.clicked.connect(lambda: self.switch_signal.emit("data_entry"))
+        self.btn_entry.clicked.connect(lambda: self.switch_signal.emit("data_entry", None))
         self.page_change.addWidget(self.btn_map)
         self.page_change.addWidget(self.btn_entry)
 
@@ -183,6 +222,7 @@ class MapWindow(QWidget):
 
         # Matplotlib canvas and toolbar
         self.canvas = ShipwreckMapCanvas(self)
+        self.canvas.switch_signal.connect(self.relay_signal)
         self.toolbar = NavBar(self.canvas, self)
 
         layout.addWidget(self.toolbar)
@@ -197,6 +237,11 @@ class MapWindow(QWidget):
         self.oceans_input.currentTextChanged.connect(lambda: self.hierarchy("ocean"))
         self.countries_input.currentTextChanged.connect(lambda: self.hierarchy("country"))
         self.local_input.currentTextChanged.connect(lambda: self.hierarchy("local"))
+
+
+    def relay_signal(self, page_name, data=None):
+        """ Relay the signal from the canvas to the main window. """
+        self.switch_signal.emit(page_name, data)
 
     
     def hierarchy(self, source):

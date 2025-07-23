@@ -14,7 +14,7 @@ from dicts import sections, boxes_dict, input_dict
 
 class DataEntryWindow(QWidget):
 
-    switch_signal = pyqtSignal(str)
+    switch_signal = pyqtSignal(str, object)
 
     def __init__(self):
         super().__init__()
@@ -30,9 +30,9 @@ class DataEntryWindow(QWidget):
         # Creates the buttons to change between parts of the app
         self.page_change = QHBoxLayout()
         self.btn_map = QPushButton("Map")
-        self.btn_map.clicked.connect(lambda: self.switch_signal.emit("map"))
+        self.btn_map.clicked.connect(lambda: self.switch_signal.emit("map", None))
         self.btn_entry = QPushButton("Data Entry")
-        self.btn_entry.clicked.connect(lambda: self.switch_signal.emit("data_entry"))
+        self.btn_entry.clicked.connect(lambda: self.switch_signal.emit("data_entry", None))
         self.page_change.addWidget(self.btn_map)
         self.page_change.addWidget(self.btn_entry)
         layout.addLayout(self.page_change)
