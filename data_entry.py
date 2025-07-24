@@ -76,8 +76,11 @@ class DataEntryWindow(QWidget):
                         if key == "wood_type":
                             self.wood_types_input = widget
 
-                        what = boxes[key][0] # what to gather
-                        where = boxes[key][1] # where to gather
+                        print(boxes)
+                        print(boxes[key])
+
+                        what = boxes[key][1] # what to gather
+                        where = boxes[key][2] # where to gather
                         query = f"SELECT {what} FROM {where}" #create the query for the prompt
                         conn = sqlite3.connect("shipwrecks.db")
                         c = conn.cursor()
@@ -90,10 +93,9 @@ class DataEntryWindow(QWidget):
                         # add the data to the dropdown lists
                         widget.addItem("")
                         for row in data:
-                            if key in locations: # locations have id and name
-                                widget.addItem(row[1])
-                            else: # everything else just has name
-                                widget.addItem(row[0])
+                            print(row)    # TODO: i changed nations in extras. I also gave every dict in boxes a third item. this is now messed up.
+                                          # look at github to see how it looked before.
+                            widget.addItem(row[1])
 
                     form.addRow(key.replace('_', ' ').capitalize(), widget)
 

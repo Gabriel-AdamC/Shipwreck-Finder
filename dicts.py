@@ -78,7 +78,7 @@ def sections():
             "sources": {
                 "images": QPushButton("Add Photos"),
                 "caption": QLineEdit(),
-                "other_sources": QLineEdit()
+                "other_sources": QLineEdit()    
             }
         }
     
@@ -87,25 +87,25 @@ def sections():
 
 def boxes_dict():
     boxes = {
-            "ocean": ["ocean_id, ocean_name", "oceans"],
-            "country": ["country_id, country_name", "countries"],
-            "district": ["district_id, district_name", "districts"],
-            "local_location": ["local_id, local_name, country_id", "local"],
-            "coordinate_type": ["coord_type", "coord_type"],
-            "coordinate_confidence": ["confidence", "confidence"],
-            "material": ["material_name", "materials"],
-            "wood_type": ["name", "wood_types"],
-            "fastening": ["fastening_name", "fastening"],
-            "sheathing": ["sheathing_name", "sheathing"],
-            "ship_purpose": ["reason", "purpose"],
-            "ship_type": ["type_name", "type"],
-            "propulsion": ["propulsion_name", "propulsion"],
-            "engine_type": ["engine_name", "engines"],
-            "nation": ["nation", "extras"],
-            "registered_port": ["port_name", "ports"],
-            "trade_route": ["route_name", "trade_routes"],
-            "port_departed": ["port_name", "ports"],
-            "port_destination": ["port_name", "ports"]
+            "ocean": ["ocean_id", "ocean_name", "oceans"],
+            "country": ["country_id", "country_name", "countries"],
+            "district": ["district_id", "district_name", "districts"],
+            "local_location": ["local_id", "local_name, country_id", "local"],
+            "coordinate_type": ["id", "coord_type", "coord_type"],
+            "coordinate_confidence": ["id", "confidence", "confidence"],
+            "material": ["material_id", "material_name", "materials"],
+            "wood_type": ["wood_id", "name", "wood_types"],
+            "fastening": ["fastening_id", "fastening_name", "fastening"],
+            "sheathing": ["sheathing_id", "sheathing_name", "sheathing"],
+            "ship_purpose": ["purpose_id", "reason", "purpose"],
+            "ship_type": ["thype_id", "type_name", "type"],
+            "propulsion": ["propulsion_id", "propulsion_name", "propulsion"],
+            "engine_type": ["engine_id", "engine_name", "engines"],
+            "nation": ["id", "nation", "nations"],
+            "registered_port": ["id", "port_name", "ports"],
+            "trade_route": ["id", "route_name", "trade_routes"],
+            "port_departed": ["id", "port_name", "ports"],
+            "port_destination": ["id", "port_name", "ports"]
         }
     
     return boxes

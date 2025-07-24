@@ -58,7 +58,7 @@ class ShipwreckMapCanvas(FigureCanvas):
 
     def on_click(self, event):
         """ Handle Click Events On The Map """
-        wreck_data = {}
+        wreck_data = []
         xdata = event.xdata
         ydata = event.ydata
         wrecks = self.load_basic_data()
@@ -71,7 +71,7 @@ class ShipwreckMapCanvas(FigureCanvas):
 
             # is this wreck by the click?
             if (abs(wreck_lon - xdata) <= radius and abs(wreck_lat - ydata) <= radius):
-                wreck_data[(wreck_lon, wreck_lat)] = wreck
+                wreck_data.append(wreck)
 
         # send user to new page with those wrecks
         if wreck_data:
