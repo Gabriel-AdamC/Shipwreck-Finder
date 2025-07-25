@@ -76,9 +76,6 @@ class DataEntryWindow(QWidget):
                         if key == "wood_type":
                             self.wood_types_input = widget
 
-                        print(boxes)
-                        print(boxes[key])
-
                         what = boxes[key][1] # what to gather
                         where = boxes[key][2] # where to gather
                         query = f"SELECT {what} FROM {where}" #create the query for the prompt
@@ -93,9 +90,7 @@ class DataEntryWindow(QWidget):
                         # add the data to the dropdown lists
                         widget.addItem("")
                         for row in data:
-                            print(row)    # TODO: i changed nations in extras. I also gave every dict in boxes a third item. this is now messed up.
-                                          # look at github to see how it looked before.
-                            widget.addItem(row[1])
+                            widget.addItem(row[0])
 
                     form.addRow(key.replace('_', ' ').capitalize(), widget)
 
@@ -113,7 +108,7 @@ class DataEntryWindow(QWidget):
                         conn = sqlite3.connect("shipwrecks.db")
                         c = conn.cursor()
                         c.execute("""SELECT * FROM country_ocean""")
-                        self.country_ocean = c.fetchall()
+                        self.country_ocean = c.fetchall() 
 
                         source_key = key
                         signifier = "_"
@@ -410,8 +405,8 @@ class DataEntryWindow(QWidget):
             self.oceans_input,
             self.countries_input,
             self.local_input,
-            get_ocean_id_by_name=lambda name: get_ocean_id_by_name(name, self.oceans),
-            get_country_id_by_name=lambda name: get_country_id_by_name(name, self.countries),
+            get_ocean_id_by_name=lambda name: get_ocean_id_by_name(name),
+            get_country_id_by_name=lambda name: get_country_id_by_name(name),
             placeholder={
                 "ocean": "",
                 "country": "",

@@ -257,8 +257,8 @@ class MapWindow(QWidget):
             self.oceans_input,
             self.countries_input,
             self.local_input,
-            get_ocean_id_by_name=lambda name: get_ocean_id_by_name(name, self.oceans),
-            get_country_id_by_name=lambda name: get_country_id_by_name(name, self.countries)
+            get_ocean_id_by_name=lambda name: get_ocean_id_by_name(name),
+            get_country_id_by_name=lambda name: get_country_id_by_name(name)
         )
 
 

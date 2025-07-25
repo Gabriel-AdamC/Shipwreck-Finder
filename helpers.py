@@ -1,3 +1,5 @@
+import sqlite3
+
 def location_change(
         source,
         selected_ocean,
@@ -46,7 +48,11 @@ def location_change(
             
             if selected_ocean != placeholder.get("ocean", ""):
                 # Filter countries that border selected ocean
-                filtered_countries = [c for c in countries if (c[0], get_ocean_id_by_name(selected_ocean)) in country_ocean]
+                print(countries)
+                ocean_id = get_ocean_id_by_name(selected_ocean)
+                if ocean_id is not None:
+                    ocean_id = ocean_id[0]
+                filtered_countries = [c for c in countries if c[0] in [co[0] for co in country_ocean if co[1] == ocean_id]]
                 countries_input.clear()
                 countries_input.addItem(placeholder.get("country", ""))
                 for country in filtered_countries:
@@ -59,7 +65,7 @@ def location_change(
                     countries_input.setCurrentIndex(0)
 
                 # Filter locals that also border same ocean
-                country_ids = [co[0] for co in country_ocean if co[1] == get_ocean_id_by_name(selected_ocean)]
+                country_ids = [co[0] for co in country_ocean if co[1] == ocean_id]
                 filtered_locals = [l for l in local if l[2] in country_ids]
                 local_input.clear()
                 local_input.addItem(placeholder.get("local", ""))
@@ -84,6 +90,9 @@ def location_change(
                 for local_item in local:
                     local_input.addItem(local_item[1])
                 local_input.setCurrentIndex(0)  # Reset to placeholder
+
+
+                # TODO: source == ocean works, fix the rest
 
         elif source == "country":
             country_id = get_country_id_by_name(selected_country)
@@ -203,9 +212,21 @@ def location_change(
         local_input.blockSignals(False)
         
 
-def get_country_id_by_name(name, countries):
-        return next((c[0] for c in countries if c[1] == name), None)
+def get_country_id_by_name(name):
+    
+    conn = sqlite3.connect("shipwrecks.db")
+    c = conn.cursor()
+    c.execute(f"SELECT country_id FROM countries WHERE country_name = ?", (name,))
+    id = c.fetchone()
+    conn.close()
+    return id
 
 
-def get_ocean_id_by_name(name, oceans):
-    return next((o[0] for o in oceans if o[1] == name), None)
+def get_ocean_id_by_name(name):
+
+    conn = sqlite3.connect("shipwrecks.db")
+    c = conn.cursor()
+    c.execute(f"SELECT ocean_id FROM oceans WHERE ocean_name = ?", (name,))
+    id = c.fetchone()
+    conn.close()
+    return id
