@@ -1,0 +1,28 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# PyInstaller files
+*.spec
+dist/
+
+# VS Code files
+.vscode/
+
+# Specific files
+shipwrecks.db
+.venv
+images
+
+# MacOS files
+.DS_Store
+
+# Logs
+*.log
