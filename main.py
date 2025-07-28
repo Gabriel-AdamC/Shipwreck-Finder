@@ -5,6 +5,10 @@ from see_wreck import WreckInfoWindow
 
 # TODO: Add districts
 
+# TODO: Need to make the caption to image more user friendly, and make it work.
+    # caption[0] goes to image[0] and so on
+        # need to make the data entry caption work for multiple captions per entry (currently at 1 per entry)
+
 # TODO: Add a page gui for data editing, so that you can edit shipwrecks in the database
 # TODO: Add a page gui for data deletion, so that you can delete shipwrecks from the database
 #           May face issues with auto-incrementing IDs, so may need to handle that in the database

@@ -1,8 +1,9 @@
 from PyQt5.QtWidgets import (
       QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout,
-      QTabWidget, QLineEdit, QComboBox, QFormLayout,
-      QFileDialog, QDialog)
-from PyQt5.QtCore import pyqtSignal
+      QTabWidget, QComboBox, QFormLayout,
+      QFrame, QScrollArea, QGridLayout)
+from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtGui import QPixmap, QFont, QPalette, QColor
 import sqlite3
 from dicts import sections, boxes_dict, input_dict
 
@@ -63,8 +64,34 @@ class WreckInfoWindow(QWidget):
 
             form = QFormLayout()
 
-            # TODO: this will just add everything multiple times to each tab
+            if section_name == "sources":
+                """ Generate The Sources Tab Seperately, It Has Images """
+
+                title = QLabel("Image Gallery")
+                title.setAlignment(Qt.AlignCenter)
+                title.setFont(QFont("Arial", 18, QFont.Bold))
+                tab_layout.addWidget(title)
+
+                scroll_area = QScrollArea()
+                scroll_area.setWidgetResizable(True)
+                scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+                scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+
+                # Container for grid
+                container = QWidget()
+                grid_layout = QGridLayout()
+                container.setLayout(grid_layout)
+                
+                # Add images to grid
+                self.create_grid(grid_layout)
+                
+                scroll_area.setWidget(container)
+                tab_layout.addWidget(scroll_area)
+
+                continue
+
             for key in fields.keys():
+                
                 if key in data:
                     # switch to the other dict 
                     data_keys = data[key]
@@ -133,7 +160,79 @@ class WreckInfoWindow(QWidget):
         return ids
     
 
+    def create_grid(self, grid_layout):
+        """ Creates The Grid Of Images """
+
+        columns = 3 
+
+        image_data = link_im_cap()
+
+        for i, (image_path, caption) in enumerate(image_data):
+            row = i // columns
+            col = i % columns
+
+            # create a frame for each image caption pair
+            frame = QFrame()
+            frame.setFrameStyle(QFrame.box)
+            frame.setLineWidth(1)
+            frame_layout = QVBoxLayout()
+            frame.setLayout(frame_layout)
+
+            image_label = ClickableImageLabel(image_path, caption)
+
+            # load and scale the image
+            pixmap = QPixmap(200, 150)
+            pixmap.fill(QColor(200, 200, 200))
+
+            # try to load the actual image
+            actual_pixmap = QPixmap(image_path)
+            if not actual_pixmap.isNull():
+                pixmap = actual_pixmap.scaled(200, 150, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+
+            image_label.setPixmap(pixmap)
+            image_label.setFixedSize(200, 150)
+            image_label.setScaledContents(True)
+
+            image_label.clicked.connect(self.full_screen)
+
+            # set the captions
+            caption_label = QLabel(caption)
+            caption_label.setWordWrap(True)
+            caption_label.setAlignment(Qt.AlignCenter)
+            caption_label.setMaximumWidth(200)
+            caption_label.setStyleSheet("""
+                padding: 5px;
+                font-size: 12px;
+                background-color: #f0f0f0;
+                border-radius: 3px;
+            """)
+
+            frame_layout.addWidget(image_label)
+            frame_layout.addWidget(caption_label)
+
+            grid_layout.addWidget(frame, row, col)
+
+        
+    def full_screen(self, image_path, caption):
+        self.full_screen_viewer.show_image(image_path, caption)
+    
+
     def update_ship_info(self, name):
         """Update both name and id when ship selection changes"""
         self.name = name
         self.ids = self.update_id(name)
+
+    
+    def link_im_cap(self):
+        """ Links The Images To The Captions """
+        image_data = []
+
+        conn = sqlite3.connect("shipwrecks.db")
+        c = conn.cursor()
+        c.execute("SELECT image_path FROM images WHERE ship_id = ?", self.ids[0])
+        image_paths = c.fetchall()
+        c.execute("SELECT caption FROM images WHERE ship_id = ?", self.ids[0])
+        captions = c.fetchall()
+        conn.close()
+
+        for i, image_path in 
