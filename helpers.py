@@ -48,8 +48,9 @@ def location_change(
             
             if selected_ocean != placeholder.get("ocean", ""):
                 # Filter countries that border selected ocean
-                print(countries)
+
                 ocean_id = get_ocean_id_by_name(selected_ocean)
+
                 if ocean_id is not None:
                     ocean_id = ocean_id[0]
                 filtered_countries = [c for c in countries if c[0] in [co[0] for co in country_ocean if co[1] == ocean_id]]
@@ -91,14 +92,14 @@ def location_change(
                     local_input.addItem(local_item[1])
                 local_input.setCurrentIndex(0)  # Reset to placeholder
 
-
-                # TODO: source == ocean works, fix the rest
-
         elif source == "country":
+
             country_id = get_country_id_by_name(selected_country)
 
             if selected_country != placeholder.get("country", ""):
                 # Filter oceans connected to this country
+                if country_id is not None:
+                    country_id = country_id[0]
                 ocean_ids = [co[1] for co in country_ocean if co[0] == country_id]
                 filtered_oceans = [o for o in oceans if o[0] in ocean_ids]
                 oceans_input.clear()

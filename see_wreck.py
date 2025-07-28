@@ -68,22 +68,22 @@ class WreckInfoWindow(QWidget):
                 if key in data:
                     # switch to the other dict 
                     data_keys = data[key]
-                    info = self.populate(data_keys[0], data_keys[1], data_keys[2], key)
-                    if info is None:
-                        continue
-                    viewable_data = info[0]
-                    if viewable_data is None:
-                        continue
-                    elif isinstance(viewable_data, int) or isinstance(viewable_data, float):
-                        viewable_data = str(viewable_data) 
-                    form.addRow(key.replace("_", " ").capitalize(), QLabel(viewable_data))
 
-                #query = f"SELECT {}"
-                
-            # for the specific ship
-                # look for data
-                    # if blank, continue
-                    # else display the data
+                    info = self.populate(data_keys[0], data_keys[1], data_keys[2], key)
+
+                    # I dont want to leave blank spaces on the page
+                    if info is None:
+                        info = "N/A"
+
+                    # if its a year or measurement I want to keep it as is
+                    if isinstance(info, int) or isinstance(info, float): 
+                        info = str(info) 
+
+                    form.addRow(key.replace("_", " ").capitalize(), QLabel(info))
+            
+            tab_layout.addLayout(form)
+
+
         # have a edit button
             # takes you to an editing page
         # delete button
@@ -106,19 +106,21 @@ class WreckInfoWindow(QWidget):
         else:
             c.execute(f"SELECT {what} FROM {where} WHERE (build_id) = ?", (self.ids[2],))
 
-        results = c.fetchall()
+        results = c.fetchone()
+        result = results[0] if results else None
 
-        if lookup and results[0] != "None": # if the result is an id, lookup the name
+        if lookup and result != None and isinstance(result, int): # if the result is an id, lookup the name
             for key, value in self.combo_boxes.items():
-                if value[1] == lookup:
-                    print(value)
-                    print(results)   # TODO: this is where i left off, i think. Fix this code
+                if value[2] == lookup:
                     query2 = f"SELECT {value[1]} FROM {value[2]} WHERE {value[0]} = ?"
-                    c.execute(query2, (results[0][0],))
-                    results = c.fetchall()
+                    c.execute(query2, (result,))
+                    names = c.fetchone()
+                    name = names[0] if names else None
+                    conn.close()
+                    return name
         
         conn.close()
-        return results[0] if results else None
+        return result
 
 
     def update_id(self, ship):

@@ -393,14 +393,24 @@ class DataEntryWindow(QWidget):
         
         mapped_source = source_mapping.get(source, source)
 
+        conn = sqlite3.connect("shipwrecks.db")
+        c = conn.cursor()
+        c.execute("SELECT * FROM local")
+        local = c.fetchall()
+        c.execute("SELECT * FROM countries")
+        countries = c.fetchall()
+        c.execute("SELECT * FROM oceans")
+        oceans = c.fetchall()
+        conn.close()
+
         location_change(
             mapped_source,  
             self.oceans_input.currentText().strip(),
             self.countries_input.currentText().strip(),
             self.local_input.currentText().strip(),
-            self.oceans,
-            self.countries,
-            self.local,
+            oceans,
+            countries,
+            local,
             self.country_ocean,
             self.oceans_input,
             self.countries_input,

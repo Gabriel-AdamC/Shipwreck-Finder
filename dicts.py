@@ -105,7 +105,8 @@ def boxes_dict():
             "registered_port": ["id", "port_name", "ports"],
             "trade_route": ["id", "route_name", "trade_routes"],
             "port_departed": ["id", "port_name", "ports"],
-            "port_destination": ["id", "port_name", "ports"]
+            "port_destination": ["id", "port_name", "ports"],
+            "nation": ["id", "nation", "nations"]
         }
     
     return boxes
@@ -158,7 +159,7 @@ def input_dict():
             "historical_event": ("extras", "historical_event", None),
             "other_details": ("extras", "notes", None),
             # registration tab
-            "nation": ("extras", "nation", None),
+            "nation": ("extras", "nation", "nations"),
             "registered_port": ("wrecks", "registered_port", None),
             "registration_number": ("extras", "registration_number", None),
             "owners": ("extras", "owners", None),
