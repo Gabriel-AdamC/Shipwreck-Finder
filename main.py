@@ -3,11 +3,18 @@ from map import MapWindow
 from data_entry import DataEntryWindow
 from see_wreck import WreckInfoWindow
 
+# TODO: fix captions, images, add buttons to see_wreck, maybe make see_wreck look better but thats ;long term
+
 # TODO: Add districts
+
+# TODO: if data enty text is too long, it goes off page. Make it wrap instead?
+
+# TODO: filters are iffy, if just ocean it doesnt work properly, so maybe make country compulsory?
 
 # TODO: Need to make the caption to image more user friendly, and make it work.
     # caption[0] goes to image[0] and so on
         # need to make the data entry caption work for multiple captions per entry (currently at 1 per entry)
+            # and currently the 1 caption gets set to every image
 
 # TODO: Add a page gui for data editing, so that you can edit shipwrecks in the database
 # TODO: Add a page gui for data deletion, so that you can delete shipwrecks from the database
