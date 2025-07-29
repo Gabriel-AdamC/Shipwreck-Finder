@@ -1,0 +1,210 @@
+CREATE TABLE wrecks (
+id INTEGER PRIMARY KEY,
+kraken_id TEXT,
+ship_name TEXT NOT NULL,
+year_lost TEXT,
+date_lost TEXT,
+reported_depth TEXT,
+y_coord REAL,
+x_coord REAL,
+registered_port INTEGER,
+burial_location TEXT,
+location_row_ID INTEGER,
+build_id INTEGER,
+FOREIGN KEY (registered_port) REFERENCES ports(id),
+FOREIGN KEY (location_row_ID) REFERENCES locations(location_row_ID),
+FOREIGN KEY (build_id) REFERENCES builds(build_id)
+);
+
+CREATE TABLE locations (
+location_row_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+ocean_id INTEGER NOT NULL,
+country_id INTEGER,
+district_id INTEGER,
+local_id INTEGER,
+details TEXT,
+reported_coords TEXT,
+coord_conf INTEGER,
+verified_coords TEXT,
+coord_type INTEGER,
+FOREIGN KEY (ocean_id) REFERENCES oceans(ocean_id),
+FOREIGN KEY (country_id) REFERENCES countries(country_id),
+FOREIGN KEY (district_id) REFERENCES districts(district_id),
+FOREIGN KEY (local_id) REFERENCES local(local_id),
+FOREIGN KEY (coord_conf) REFERENCES confidence(id),
+FOREIGN KEY (coord_type) REFERENCES coord_type(id)
+);
+
+CREATE TABLE builds (
+build_id INTEGER PRIMARY KEY AUTOINCREMENT,
+material_id INTEGER,
+wood_id INTEGER,
+fastening_id INTEGER,
+sheathing_id INTEGER,
+purpose_id INTEGER,
+type_id INTEGER,
+propulsion_id INTEGER,
+engine_id INTEGER,
+ship_docs TEXT,
+ship_details TEXT,
+FOREIGN KEY (material_id) REFERENCES materials(material_id),
+FOREIGN KEY (wood_id) REFERENCES wood_types(wood_id),
+FOREIGN KEY (fastening_id) REFERENCES fastening(fastening_id),
+FOREIGN KEY (sheathing_id) REFERENCES sheathing(sheathing_id),
+FOREIGN KEY (purpose_id) REFERENCES purpose(purpose_id),
+FOREIGN KEY (type_id) REFERENCES type(type_id),
+FOREIGN KEY (propulsion_id) REFERENCES propulsion(propulsion_id),
+FOREIGN KEY (engine_id) REFERENCES engines(engine_id)
+);
+
+CREATE TABLE voyage (
+id INTEGER PRIMARY KEY,
+ship_id INTEGER NOT NULL,
+trade_route INTEGER,
+port_from INTEGER,
+port_to INTEGER,
+cargo TEXT,
+FOREIGN KEY (ship_id) REFERENCES wrecks(id),
+FOREIGN KEY (trade_route) REFERENCES trade_routes(id),
+FOREIGN KEY (port_from) REFERENCES ports(id),
+FOREIGN KEY (port_to) REFERENCES ports(id)
+);
+
+CREATE TABLE images (
+id INTEGER PRIMARY KEY,
+ship_id INTEGER NOT NULL,
+image_path TEXT,
+caption TEXT,
+source TEXT,
+FOREIGN KEY (ship_id) REFERENCES wrecks(id)
+);
+
+CREATE TABLE extras (
+id INTEGER PRIMARY KEY,
+ship_id INTEGER NOT NULL,
+armaments TEXT,
+tonnage TEXT,
+length TEXT,
+breadth TEXT,
+hold_depth TEXT,
+build_year TEXT,
+builder TEXT,
+shipyard TEXT,
+sequence_of_wreck TEXT,
+historical_event TEXT,
+notes TEXT,
+nation INTEGER,
+registration_number TEXT,
+owners TEXT,
+previous_names TEXT,
+sahris_id TEXT,
+captain TEXT,
+commander TEXT,
+crew TEXT,
+passengers TEXT,
+total_aboard TEXT,
+casualties TEXT,
+archaeologist TEXT,
+artefacts TEXT,
+year_salvaged TEXT,
+salvors TEXT,
+details TEXT,
+FOREIGN KEY (ship_id) REFERENCES wrecks(id),
+FOREIGN KEY (nation) REFERENCES nations (id)
+);
+
+CREATE TABLE oceans (
+ocean_id INTEGER PRIMARY KEY,
+ocean_name TEXT NOT NULL
+);
+
+CREATE TABLE countries (
+country_id INTEGER PRIMARY KEY,
+country_name TEXT NOT NULL
+);
+
+CREATE TABLE country_ocean (
+country_id INTEGER,
+ocean_id INTEGER,
+PRIMARY KEY (country_id, ocean_id),
+FOREIGN KEY (country_id) REFERENCES countries(country_id),
+FOREIGN KEY (ocean_id) REFERENCES oceans(ocean_id)
+);
+
+CREATE TABLE districts (
+district_id INTEGER PRIMARY KEY,
+district_name TEXT NOT NULL
+);
+
+CREATE TABLE local (
+local_id INTEGER PRIMARY KEY,
+local_name TEXT NOT NULL,
+country_id INTEGER NOT NULL,
+FOREIGN KEY (country_id) REFERENCES countries(country_id)
+);
+
+CREATE TABLE confidence (
+id INTEGER PRIMARY KEY,
+confidence TEXT NOT NULL
+);
+
+CREATE TABLE coord_type (
+id INTEGER PRIMARY KEY,
+coord_type TEXT NOT NULL
+);
+
+sqlite> .schema materials
+CREATE TABLE materials (
+material_id INTEGER PRIMARY KEY,
+material_name TEXT NOT NULL
+);
+
+CREATE TABLE wood_types (
+wood_id INTEGER PRIMARY KEY,
+name TEXT NOT NULL
+);
+
+CREATE TABLE fastening (
+fastening_id INTEGER PRIMARY KEY,
+fastening_name TEXT NOT NULL
+);
+
+CREATE TABLE sheathing (
+sheathing_id INTEGER PRIMARY KEY,
+sheathing_name TEXT NOT NULL
+);
+
+CREATE TABLE purpose (
+purpose_id INTEGER PRIMARY KEY,
+reason TEXT NOT NULL
+);
+
+CREATE TABLE type (
+type_id INTEGER PRIMARY KEY,
+type_name TEXT NOT NULL
+);
+
+CREATE TABLE propulsion (
+propulsion_id INTEGER PRIMARY KEY,
+propulsion_name TEXT NOT NULL
+);
+
+CREATE TABLE engines (
+engine_id INTEGER PRIMARY KEY,
+engine_name TEXT NOT NULL
+);
+
+CREATE TABLE trade_routes (
+id INTEGER PRIMARY KEY,
+route_name TEXT NOT NULL
+);
+
+CREATE TABLE ports (
+id INTEGER PRIMARY KEY,
+port_name TEXT NOT NULL
+);
+
+CREATE TABLE nations (
+id INTEGER PRIMARY KEY,
+nation TEXT NOT NULL
+);

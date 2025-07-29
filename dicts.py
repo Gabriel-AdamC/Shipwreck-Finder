@@ -98,15 +98,14 @@ def boxes_dict():
             "fastening": ["fastening_id", "fastening_name", "fastening"],
             "sheathing": ["sheathing_id", "sheathing_name", "sheathing"],
             "ship_purpose": ["purpose_id", "reason", "purpose"],
-            "ship_type": ["thype_id", "type_name", "type"],
+            "ship_type": ["type_id", "type_name", "type"],
             "propulsion": ["propulsion_id", "propulsion_name", "propulsion"],
             "engine_type": ["engine_id", "engine_name", "engines"],
             "nation": ["id", "nation", "nations"],
             "registered_port": ["id", "port_name", "ports"],
             "trade_route": ["id", "route_name", "trade_routes"],
             "port_departed": ["id", "port_name", "ports"],
-            "port_destination": ["id", "port_name", "ports"],
-            "nation": ["id", "nation", "nations"]
+            "port_destination": ["id", "port_name", "ports"]
         }
     
     return boxes
@@ -160,7 +159,7 @@ def input_dict():
             "other_details": ("extras", "notes", None),
             # registration tab
             "nation": ("extras", "nation", "nations"),
-            "registered_port": ("wrecks", "registered_port", None),
+            "registered_port": ("wrecks", "registered_port", "ports"),
             "registration_number": ("extras", "registration_number", None),
             "owners": ("extras", "owners", None),
             "previous_names": ("extras", "previous_names", None),
@@ -179,9 +178,9 @@ def input_dict():
             "cargo": ("voyage", "cargo", None),
             "year_salvaged": ("extras", "year_salvaged", None),
             "salvor": ("extras", "salvors", None),
-            "other_details": ("misc", "details", None),
+            "other_details": ("extras", "details", None),
             # sources tab
-            "images": ("images", "image_path", "multiple", None),
+            "images": ("images", "image_path", None),
             "caption": ("images", "caption", None),
             "other_sources": ("images", "source", None)
         }

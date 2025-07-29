@@ -235,4 +235,4 @@ class WreckInfoWindow(QWidget):
         captions = c.fetchall()
         conn.close()
 
-        for i, image_path in 
+        #for i, image_path in 

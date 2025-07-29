@@ -312,9 +312,9 @@ class MapWindow(QWidget):
                     ports_from.port_name AS port4_name,
                     voyage.trade_route,
                     trade_routes.route_name,
-                    misc.coord_type,
+                    locations.coord_type,
                     coord_type.coord_type,
-                    misc.confidence,
+                    locations.coord_conf,
                     confidence.confidence,
                     builds.wood_id,
                     wood_types.name,
@@ -337,9 +337,8 @@ class MapWindow(QWidget):
                 LEFT JOIN ports AS ports_to ON voyage.port_to = ports_to.id
                 LEFT JOIN ports AS ports_from ON voyage.port_from = ports_from.id
                 LEFT JOIN trade_routes ON voyage.trade_route = trade_routes.id
-                LEFT JOIN misc ON wrecks.id = misc.ship_id
-                LEFT JOIN coord_type ON misc.coord_type = coord_type.id
-                LEFT JOIN confidence ON misc.confidence = confidence.id
+                LEFT JOIN coord_type ON locations.coord_type = coord_type.id
+                LEFT JOIN confidence ON locations.coord_conf = confidence.id
                 LEFT JOIN wood_types ON builds.wood_id = wood_types.wood_id
                 """)
         shipwrecks = c.fetchall()
