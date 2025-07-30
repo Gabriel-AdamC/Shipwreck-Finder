@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (QLineEdit, QComboBox, QPushButton, QLabel)
+from PyQt5.QtWidgets import (QLineEdit, QComboBox, QPushButton, QTextEdit)
 
 def sections():
     sections = {
@@ -13,7 +13,7 @@ def sections():
                 "country": QComboBox(),
                 "district": QComboBox(),
                 "local_location": QComboBox(),
-                "details_of_location": QLineEdit(),
+                "details_of_location": QTextEdit(),
                 "reported_coordinates": QLineEdit(),
                 "coordinate_confidence": QComboBox(),
                 "verified_coordinates": QLineEdit(),
@@ -27,7 +27,7 @@ def sections():
                 "wood_type": QComboBox(),
                 "fastening": QComboBox(),
                 "sheathing": QComboBox(),
-                "armament": QLineEdit(),
+                "armament": QTextEdit(),
                 "ship_purpose": QComboBox(),
                 "ship_type": QComboBox(),
                 "tonnage": QLineEdit(),
@@ -39,46 +39,46 @@ def sections():
                 "build_year": QLineEdit(),
                 "builder": QLineEdit(),
                 "shipyard": QLineEdit(),
-                "ship_documents": QLineEdit(),
-                "other_details": QLineEdit()
+                "ship_documents": QTextEdit(),
+                "other_details": QTextEdit()
             },
             "wreck_event": {
                 "trade_route": QComboBox(),
                 "port_departed": QComboBox(),
                 "port_destination": QComboBox(),
-                "sequence_of_events": QLineEdit(),
-                "historical_event": QLineEdit(),
-                "other_details": QLineEdit()
+                "sequence_of_events": QTextEdit(),
+                "historical_event": QTextEdit(),
+                "other_details": QTextEdit()
             },
             "registration": {
                 "nation": QComboBox(),
                 "registered_port": QComboBox(),
                 "registration_number": QLineEdit(),
-                "owners": QLineEdit(),
-                "previous_names": QLineEdit(),
+                "owners": QTextEdit(),
+                "previous_names": QTextEdit(),
                 "sahris_id": QLineEdit()
             },
             "personnel": {
-                "captain": QLineEdit(),
-                "commander": QLineEdit(),
-                "crew": QLineEdit(),
-                "passengers": QLineEdit(),
+                "captain": QTextEdit(),
+                "commander": QTextEdit(),
+                "crew": QTextEdit(),
+                "passengers": QTextEdit(),
                 "number_aboard": QLineEdit(),
                 "casualties": QLineEdit(),
-                "burial_location": QLineEdit()
+                "burial_location": QTextEdit()
             },
             "archaeology": {
-                "archaeologists": QLineEdit(),
-                "artefacts": QLineEdit(),
-                "cargo": QLineEdit(),
+                "archaeologists": QTextEdit(),
+                "artefacts": QTextEdit(),
+                "cargo": QTextEdit(),
                 "year_salvaged": QLineEdit(),
-                "salvor": QLineEdit(),
-                "other_details": QLineEdit()
+                "salvor": QTextEdit(),
+                "other_details": QTextEdit()
             },
             "sources": {
                 "images": QPushButton("Add Photos"),
                 "caption": QLineEdit(),
-                "other_sources": QLineEdit()    
+                "other_sources": QTextEdit()    
             }
         }
     

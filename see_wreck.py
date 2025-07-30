@@ -1,12 +1,13 @@
 from PyQt5.QtWidgets import (
       QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout,
       QTabWidget, QComboBox, QFormLayout, QApplication,
-      QFrame, QScrollArea, QGridLayout)
+      QFrame, QScrollArea, QGridLayout, QDialog, QDialogButtonBox)
 from PyQt5.QtCore import pyqtSignal, Qt
-from PyQt5.QtGui import QPixmap, QFont, QPalette, QColor
+from PyQt5.QtGui import QPixmap, QFont, QColor
 import sqlite3
 from dicts import sections, boxes_dict, input_dict
 
+# TODO: delete the local image path as well as the image path in the db
 
 class WreckInfoWindow(QWidget):
     switch_signal = pyqtSignal(str, object)
@@ -112,15 +113,26 @@ class WreckInfoWindow(QWidget):
                     if isinstance(info, int) or isinstance(info, float): 
                         info = str(info) 
 
-                    form.addRow(key.replace("_", " ").capitalize(), QLabel(info))
+                    # allow the info to wrap to prevent screen runoff
+                    label = QLabel(info)
+                    label.setWordWrap(True)
+
+                    form.addRow(key.replace("_", " ").capitalize(), label)
             
             tab_layout.addLayout(form)
 
+        # have an edit and delete button
+        buttons = QHBoxLayout()
 
-        # have a edit button
-            # takes you to an editing page
-        # delete button
-            # deletes the shipwreck from the db0
+        edit = QPushButton("Edit This Wreck")
+        delete = QPushButton("Delete This Wreck")
+        buttons.addWidget(edit)
+        buttons.addWidget(delete)
+        self.main_layout.addLayout(buttons)
+
+        # add functionality to buttons
+        edit.clicked.connect(lambda: self.confirm("edit"))
+        delete.clicked.connect(lambda: self.confirm("delete"))
 
     
     def populate(self, where, what, lookup, key):
@@ -265,6 +277,79 @@ class WreckInfoWindow(QWidget):
         
         return image_data
     
+
+    def confirm(self, action):
+        """ Provide A Dialog To The User That Takes Them To Another Page """
+        phrase = QLabel(f"Are you certain you want to {action} this wreck?")
+        title = f"{action.capitalize()} wreck?"
+        dlg = QDialog(self)
+        dlg.setWindowTitle(title)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        if action == "edit":
+            buttons.accepted.connect(lambda: self.edit())
+        else:
+            buttons.accepted.connect(lambda: self.delete())
+        buttons.rejected.connect(dlg.reject)
+
+        message_layout = QVBoxLayout()
+        message_layout.addWidget(phrase)
+        message_layout.addWidget(buttons)
+        dlg.setLayout(message_layout)
+
+        return dlg.exec_()
+    
+
+    def edit(self):
+        print("editing")
+        # emit signal to switch to the edit_wreck page
+        # emit the ship_id
+
+
+    def delete(self):
+        """ Deletes The Wreck From The Database Completely """
+        tables = ["wrecks", "builds", "locations", "voyage", "extras", "images"]
+        confusing = ["wrecks", "builds", "locations"] # These will all have different queries
+
+        try:
+            # i need the location_row_ID and the build_id 
+            conn = sqlite3.connect("shipwrecks.db")
+            c = conn.cursor()
+            c.execute("SELECT location_row_ID, build_id FROM wrecks WHERE id = ?", (self.ids[0],))
+            result = c.fetchone()
+            if result:
+                location_id, build_id = result
+            else:
+                location_id, build_id = None, None
+            for table in tables:
+                if table not in confusing:
+                    query = f"DELETE FROM {table} WHERE ship_id = ?"
+                    c.execute(query, (self.ids[0],))
+                elif table == "wrecks":
+                    query = "DELETE FROM wrecks WHERE id = ?"
+                    c.execute(query, (self.ids[0],))
+                elif table == "builds":
+                    query = "DELETE FROM builds WHERE build_id = ?"
+                    c.execute(query, (build_id,))
+                else: # only other table is locations
+                    query = "DELETE FROM locations WHERE location_row_ID = ?"
+                    c.execute(query, (location_id,))
+
+            conn.commit()
+            conn.close()
+        
+        except sqlite3.OperationalError as e:
+            print(f"error: {e}")
+
+        except sqlite3.IntegrityError as e:
+            print(f"error: {e}")
+
+        except sqlite3.ProgrammingError as e:
+            print(f"error: {e}")
+
+        except sqlite3.DataError as e:
+            print(f"error: {e}")
+
 
 class ClickableImageLabel(QLabel):
     """ Custom QLabel That Emits A Signal When Clickd """

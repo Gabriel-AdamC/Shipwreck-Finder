@@ -4,12 +4,13 @@ import uuid
 from PyQt5.QtWidgets import (
       QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout,
       QTabWidget, QLineEdit, QComboBox, QFormLayout,
-      QFileDialog, QDialog)
-from PyQt5.QtCore import pyqtSignal, QDir
+      QFileDialog, QDialog, QTextEdit, QScrollArea)
+from PyQt5.QtCore import pyqtSignal, QDir, Qt
 from PyQt5.QtGui import QPixmap
 import sqlite3
-from helpers import location_change, get_country_id_by_name, get_ocean_id_by_name
+from helpers import location_change, get_country_id_by_name, get_ocean_id_by_name, change_height
 from dicts import sections, boxes_dict, input_dict
+from functools import partial
 
 
 class DataEntryWindow(QWidget):
@@ -62,7 +63,14 @@ class DataEntryWindow(QWidget):
             tab.setLayout(tab_layout)
             form_sections.addTab(tab, section_name)
 
-            form = QFormLayout()
+            # allow scrolling and resizing widgets to allow for better wrapping of text
+            scroll_area = QScrollArea()
+            scroll_area.setWidgetResizable(True)
+            scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+
+            form_widget = QWidget()
+            form = QFormLayout(form_widget)
 
             if section_name == "sources": # create a reference so I can place pixmaps 
                 self.sources_tab_layout = tab_layout
@@ -111,8 +119,6 @@ class DataEntryWindow(QWidget):
                         self.country_ocean = c.fetchall() 
 
                         source_key = key
-                        signifier = "_"
-                        new_key = key.split(signifier)[0]
                         widget.currentTextChanged.connect(lambda _, sk=source_key: self.hierarchy(sk))
 
                 elif isinstance(widget, QLineEdit):
@@ -121,12 +127,26 @@ class DataEntryWindow(QWidget):
                         self.caption_input = widget
                     elif key == "other_sources": 
                         self.source_input = widget
+
+                elif isinstance(widget, QTextEdit):
+                    # i want the TextEdits to scale based on how much is inside of them
+                    text_edit = widget
+                    form.addRow(key.replace('_', ' ').capitalize(), text_edit)
+
+                    # call to set height
+                    change_height(text_edit)
+
+                    # change height when a line is wrapped
+                    text_edit.textChanged.connect(partial(change_height, text_edit))
+
                 else: # the only other widget is a button
                     btn = QPushButton("Add Photos")
                     btn.clicked.connect(self.add_photo)
                     form.addRow(key, btn)
-            
-            tab_layout.addLayout(form)
+
+            scroll_area.setWidget(form_widget)
+            tab_layout.addWidget(scroll_area)
+
         
         if hasattr(self, "materials_input") and hasattr(self, "wood_types_input"):
             self.materials_input.currentTextChanged.connect(self.update_wood)
@@ -423,3 +443,4 @@ class DataEntryWindow(QWidget):
                 "local": ""
             }
         )
+

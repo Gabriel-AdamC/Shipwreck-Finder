@@ -231,3 +231,29 @@ def get_ocean_id_by_name(name):
     id = c.fetchone()
     conn.close()
     return id
+
+
+def change_height(widget):
+    text_edit = widget
+    
+    # Get the document and ensure it's properly sized
+    document = text_edit.document()
+    
+    # Set document width to match the text edit's content width
+    content_width = text_edit.width() - text_edit.contentsMargins().left() - text_edit.contentsMargins().right() - 20  # Account for scrollbar
+    document.setTextWidth(content_width)
+    
+    # Get the actual document height
+    doc_height = int(document.size().height())
+    
+    # Add margins but no padding
+    margins = text_edit.contentsMargins()
+    frame_width = text_edit.frameWidth() * 2
+    
+    # Minimum height for at least one line
+    font_metrics = text_edit.fontMetrics()
+    min_height = font_metrics.lineSpacing() + margins.top() + margins.bottom() + frame_width
+    
+    height = max(min_height, doc_height + margins.top() + margins.bottom() + frame_width)
+    
+    text_edit.setFixedHeight(height)
