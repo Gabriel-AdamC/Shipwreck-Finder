@@ -1,3 +1,4 @@
+import os
 from PyQt5.QtWidgets import (
       QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout,
       QTabWidget, QComboBox, QFormLayout, QApplication,
@@ -6,8 +7,6 @@ from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QPixmap, QFont, QColor
 import sqlite3
 from dicts import sections, boxes_dict, input_dict
-
-# TODO: delete the local image path as well as the image path in the db
 
 class WreckInfoWindow(QWidget):
     switch_signal = pyqtSignal(str, object)
@@ -287,9 +286,9 @@ class WreckInfoWindow(QWidget):
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         if action == "edit":
-            buttons.accepted.connect(lambda: self.edit())
+            buttons.accepted.connect(lambda: (self.edit(), dlg.accept()))
         else:
-            buttons.accepted.connect(lambda: self.delete())
+            buttons.accepted.connect(lambda: (self.delete(), dlg.accept()))
         buttons.rejected.connect(dlg.reject)
 
         message_layout = QVBoxLayout()
@@ -301,9 +300,8 @@ class WreckInfoWindow(QWidget):
     
 
     def edit(self):
-        print("editing")
-        # emit signal to switch to the edit_wreck page
-        # emit the ship_id
+        """ Change To The Edit Wreck Page With Data """
+        self.switch_signal.emit("edit_wreck", self.ids[0])
 
 
     def delete(self):
@@ -317,38 +315,57 @@ class WreckInfoWindow(QWidget):
             c = conn.cursor()
             c.execute("SELECT location_row_ID, build_id FROM wrecks WHERE id = ?", (self.ids[0],))
             result = c.fetchone()
-            if result:
-                location_id, build_id = result
-            else:
-                location_id, build_id = None, None
+
+            # delete the local images as well
+            c.execute("SELECT image_path FROM images WHERE ship_id = ?", (self.ids[0],))
+            image_paths = c.fetchall()
+
+            if not result:
+                print("Could not find location_row_ID or build_id")
+                return 
+            
+            location_id, build_id = result
+
+            # delete the image
+            if image_paths:
+                try:
+                    for path_tuple in image_paths:
+                        path = path_tuple[0]
+                        if os.path.exists(path):
+                            os.remove(path)
+                except OSError as e:
+                    print(f"Error: {e}")
+                    # but continue with the rest of the deletion even if error here
+            
             for table in tables:
                 if table not in confusing:
                     query = f"DELETE FROM {table} WHERE ship_id = ?"
                     c.execute(query, (self.ids[0],))
-                elif table == "wrecks":
-                    query = "DELETE FROM wrecks WHERE id = ?"
-                    c.execute(query, (self.ids[0],))
+                elif table == "locations":
+                    query = "DELETE FROM locations WHERE location_row_ID = ?"
+                    c.execute(query, (location_id,))
                 elif table == "builds":
                     query = "DELETE FROM builds WHERE build_id = ?"
                     c.execute(query, (build_id,))
-                else: # only other table is locations
-                    query = "DELETE FROM locations WHERE location_row_ID = ?"
-                    c.execute(query, (location_id,))
+                else: # only other table is wrecks
+                    query = "DELETE FROM wrecks WHERE id = ?"
+                    c.execute(query, (self.ids[0],))
 
             conn.commit()
-            conn.close()
         
-        except sqlite3.OperationalError as e:
-            print(f"error: {e}")
+        except sqlite3.Error as e:
+            if conn:
+                conn.rollback()
+                print(e)
+        
+        except Exception as e:
+            if conn:
+                conn.rollback()
+                print(e)
 
-        except sqlite3.IntegrityError as e:
-            print(f"error: {e}")
-
-        except sqlite3.ProgrammingError as e:
-            print(f"error: {e}")
-
-        except sqlite3.DataError as e:
-            print(f"error: {e}")
+        finally:
+            if conn:
+                conn.close()
 
 
 class ClickableImageLabel(QLabel):
