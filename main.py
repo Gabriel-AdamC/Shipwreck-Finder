@@ -2,12 +2,17 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget
 from map import MapWindow
 from data_entry import DataEntryWindow
 from see_wreck import WreckInfoWindow
+from edit_wreck import EditWreckWindow
 
-# TODO: fix captions, images, add buttons to see_wreck, maybe make see_wreck look better but thats ;long term
+# TODO: images are missing, especially newest ship image test 1
+    # I think it only adds image to db if there is also a caption?
+    
+# TODO: transfer functions from see_wreck to helpers and make them useable in edit and delete.
+    # most of the functions should be in the helpers, maybe even new file for UI
+
+# TODO: if adding multiplewrecks in one setting, hierarchy does not correctly reset after each wreck is added to db
 
 # TODO: Add districts
-
-# TODO: if data enty text is too long, it goes off page. Make it wrap instead?
 
 # TODO: filters are iffy, if just ocean it doesnt work properly, so maybe make country compulsory?
 
@@ -40,6 +45,7 @@ class MainWindow(QMainWindow):
         self.data_entry_page = DataEntryWindow()
         self.map_page = MapWindow()
         self.see_wreck_page = None
+        self.edit_wreck_page = None
 
         self.stack.addWidget(self.map_page)
         self.stack.addWidget(self.data_entry_page)
@@ -48,8 +54,8 @@ class MainWindow(QMainWindow):
 
         self.map_page.switch_signal.connect(self.switch_page)
         self.data_entry_page.switch_signal.connect(self.switch_page)
-
-
+        
+        
     def switch_page(self, page_name, data=None):
         if page_name == "data_entry":
             self.stack.setCurrentWidget(self.data_entry_page)

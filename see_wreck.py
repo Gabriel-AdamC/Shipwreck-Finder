@@ -7,6 +7,7 @@ from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QPixmap, QFont, QColor
 import sqlite3
 from dicts import sections, boxes_dict, input_dict
+from helpers import update_id
 
 class WreckInfoWindow(QWidget):
     switch_signal = pyqtSignal(str, object)
@@ -22,25 +23,25 @@ class WreckInfoWindow(QWidget):
 
 
     def create_gui(self, wreck_data):
-        """ Creates The GUI, Basically The Data Entry Page, But Empty Spots Ommitted """
+        """ Creates The GUI, Basically The Data Entry Page """
 
         top_row = QHBoxLayout()
 
-        ship = QComboBox() # choose between the ships
+        self.ship = QComboBox() # choose between the ships
         
         for row in wreck_data:
-            ship.addItem(row[0])
+            self.ship.addItem(row[0])
 
-        self.name = ship.currentText()
-        self.ids = self.update_id(self.name)  # Creates a tuple of (ship_id, location_row_ID, build_id)
+        self.name = self.ship.currentText()
+        self.ids = update_id(self.name)  # Creates a tuple of (ship_id, location_row_ID, build_id)
 
-        ship.currentTextChanged.connect(self.update_ship_info)
+        self.ship.currentTextChanged.connect(self.update_ship_info)
 
         back = QPushButton("Back to the Map")
 
         back.clicked.connect(lambda: self.switch_signal.emit("map", None))
 
-        top_row.addWidget(ship)
+        top_row.addWidget(self.ship)
         top_row.addWidget(back)
         self.main_layout.addLayout(top_row)
 
@@ -52,6 +53,17 @@ class WreckInfoWindow(QWidget):
 
     def display(self):
         """ Sets The Data In The Tabs """
+        
+        # clear every time the page is called to allow for changing ships
+        self.info_sections.clear() 
+        if hasattr(self, "buttons"):
+            self.main_layout.removeItem(self.buttons)
+            # Clear all widgets from the layout
+            while self.buttons.count():
+                child = self.buttons.takeAt(0)
+                if child.widget():
+                    child.widget().deleteLater()
+
         # grab all the sections
         self.sections = sections()
         data = input_dict()
@@ -121,13 +133,13 @@ class WreckInfoWindow(QWidget):
             tab_layout.addLayout(form)
 
         # have an edit and delete button
-        buttons = QHBoxLayout()
+        self.buttons = QHBoxLayout()
 
         edit = QPushButton("Edit This Wreck")
         delete = QPushButton("Delete This Wreck")
-        buttons.addWidget(edit)
-        buttons.addWidget(delete)
-        self.main_layout.addLayout(buttons)
+        self.buttons.addWidget(edit)
+        self.buttons.addWidget(delete)
+        self.main_layout.addLayout(self.buttons)
 
         # add functionality to buttons
         edit.clicked.connect(lambda: self.confirm("edit"))
@@ -165,16 +177,6 @@ class WreckInfoWindow(QWidget):
         
         conn.close()
         return result
-
-
-    def update_id(self, ship):
-        """ Gets The Ship ID Of What Ship Is Selected """
-        conn = sqlite3.connect("shipwrecks.db")
-        c = conn.cursor()
-        c.execute("SELECT id, location_row_ID, build_id FROM wrecks WHERE name = ?", (ship,))
-        ids = c.fetchone()
-        conn.close()
-        return ids
     
 
     def create_grid(self, grid_layout):
@@ -248,10 +250,13 @@ class WreckInfoWindow(QWidget):
         self.full_screen_viewer.show_image(image_path, caption)
     
 
-    def update_ship_info(self, name):
+    def update_ship_info(self, new_name):
         """Update both name and id when ship selection changes"""
-        self.name = name
-        self.ids = self.update_id(name)
+        self.name = new_name
+        self.ids = update_id(new_name)
+
+        # repopulate
+        self.display()
 
     
     def link_im_cap(self):

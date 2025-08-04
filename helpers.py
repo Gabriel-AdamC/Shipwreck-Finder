@@ -1,4 +1,8 @@
 import sqlite3
+from dicts import boxes_dict, input_dict, sections
+from PyQt5.QtWidgets import QLabel, QWidget, QScrollArea, QGridLayout, QVBoxLayout, QFormLayout, QPushButton, QApplication, QFrame, QHBoxLayout
+from PyQt5.QtGui import QFont, QPixmap, QColor
+from PyQt5.QtCore import Qt, pyqtSignal
 
 def location_change(
         source,
@@ -257,3 +261,15 @@ def change_height(widget):
     height = max(min_height, doc_height + margins.top() + margins.bottom() + frame_width)
     
     text_edit.setFixedHeight(height)
+
+
+def update_id(ship):
+    """ Gets The Ship ID Of What Ship Is Selected """
+    conn = sqlite3.connect("shipwrecks.db")
+    c = conn.cursor()
+    c.execute("SELECT id, location_row_ID, build_id FROM wrecks WHERE name = ?", (ship,))
+    ids = c.fetchone()
+    conn.close()
+    return ids
+
+
