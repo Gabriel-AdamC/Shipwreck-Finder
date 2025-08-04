@@ -55,6 +55,15 @@ class MainWindow(QMainWindow):
             self.stack.setCurrentWidget(self.data_entry_page)
         elif page_name == "map":
             self.stack.setCurrentWidget(self.map_page)
+        elif page_name == "edit_wreck":
+            if self.edit_wreck_page:
+                self.stack.removeWidget(self.edit_wreck_page)
+                self.edit_wreck_page.deleteLater()
+
+            self.edit_wreck_page = EditWreckWindow(data)
+            self.stack.addWidget(self.edit_wreck_page)
+            self.edit_wreck_page.switch_signal.connect(self.switch_page)
+            self.stack.setCurrentWidget(self.edit_wreck_page)
         elif page_name == "see_wreck":
             if self.see_wreck_page:
                 self.stack.removeWidget(self.see_wreck_page)
