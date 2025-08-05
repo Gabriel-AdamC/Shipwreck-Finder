@@ -1,10 +1,11 @@
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QComboBox,
     QPushButton, QTabWidget
 )
 from PyQt5.QtCore import pyqtSignal
 import sqlite3
-import helpers
+import ui
 from dicts import boxes_dict, input_dict, sections
+from helpers import update_id
 
 class EditWreckWindow(QWidget):
     switch_signal = pyqtSignal(str, object)
@@ -15,7 +16,7 @@ class EditWreckWindow(QWidget):
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
 
-        self.data_display = helpers.DataDisplayWidget()
+        self.data_display = ui.DataDisplayWidget()
 
         self.create_gui(data)
 
@@ -57,7 +58,7 @@ class EditWreckWindow(QWidget):
 
         # set the variables for the first iteration
         self.name = ship.currentText()
-        self.ids = helpers.update_id(self.name)
+        self.ids = update_id(self.name)
 
         ship_row.addWidget(ship)
         self.main_layout.addLayout(ship_row)
@@ -102,7 +103,7 @@ class EditWreckWindow(QWidget):
     def update_info(self, new_name):
         """ Updates The Info To The Current Viewed Ship """
         self.name = new_name
-        self.ids = helpers.update_id(new_name)
+        self.ids = update_id(new_name)
 
         self.display()
         

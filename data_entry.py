@@ -290,9 +290,7 @@ class DataEntryWindow(QWidget):
                 ship_id = c.lastrowid
 
             if rest:
-                print(rest)
                 for table_name, table_data in rest.items():
-                    print(table_name, table_data)
                     if table_data:
                         if table_name == "images" and hasattr(self, "selected_images") and self.selected_images:
 

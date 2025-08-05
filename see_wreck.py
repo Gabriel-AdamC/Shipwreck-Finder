@@ -1,13 +1,10 @@
-import os
 from PyQt5.QtWidgets import (
       QWidget, QVBoxLayout, QPushButton, QLabel, QHBoxLayout,
-      QTabWidget, QComboBox, QFormLayout, QApplication,
-      QFrame, QScrollArea, QGridLayout, QDialog, QDialogButtonBox)
-from PyQt5.QtCore import pyqtSignal, Qt
-from PyQt5.QtGui import QPixmap, QFont, QColor
-import sqlite3
+      QComboBox, QDialog, QDialogButtonBox)
+from PyQt5.QtCore import pyqtSignal
 from dicts import sections, boxes_dict, input_dict
-import helpers
+import ui
+from helpers import update_id
 
 class WreckInfoWindow(QWidget):
     switch_signal = pyqtSignal(str, object)
@@ -20,7 +17,7 @@ class WreckInfoWindow(QWidget):
 
         self.wreck_data = wreck_data
 
-        self.data_display = helpers.DataDisplayWidget()
+        self.data_display = ui.DataDisplayWidget()
 
         self.create_gui(wreck_data)
 
@@ -36,7 +33,7 @@ class WreckInfoWindow(QWidget):
             self.ship.addItem(row[0])
 
         self.name = self.ship.currentText()
-        self.ids = helpers.update_id(self.name)  # Creates a tuple of (ship_id, location_row_ID, build_id)
+        self.ids = ui.update_id(self.name)  # Creates a tuple of (ship_id, location_row_ID, build_id)
 
         self.ship.currentTextChanged.connect(self.update_ship_info)
 
@@ -69,7 +66,7 @@ class WreckInfoWindow(QWidget):
     def update_ship_info(self, new_name):
         """Update both name and id when ship selection changes"""
         self.name = new_name
-        self.ids = helpers.update_id(new_name)
+        self.ids = update_id(new_name)
 
         # repopulate
         self.display()
@@ -97,8 +94,8 @@ class WreckInfoWindow(QWidget):
         return dlg.exec_()
     
 
-    def handle_edit(self):
+    def handle_edit(self, name, ids):
         """ Change To The Edit Wreck Page With Data """
-        self.switch_signal.emit("edit_wreck", self.ids[0])
+        self.switch_signal.emit("edit_wreck", ids[0])
 
 
