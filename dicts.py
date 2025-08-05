@@ -27,7 +27,6 @@ def sections():
                 "wood_type": QComboBox(),
                 "fastening": QComboBox(),
                 "sheathing": QComboBox(),
-                "armament": QTextEdit(),
                 "ship_purpose": QComboBox(),
                 "ship_type": QComboBox(),
                 "tonnage": QLineEdit(),
@@ -39,15 +38,16 @@ def sections():
                 "build_year": QLineEdit(),
                 "builder": QLineEdit(),
                 "shipyard": QLineEdit(),
-                "ship_documents": QTextEdit(),
                 "other_details": QTextEdit()
             },
             "wreck_event": {
                 "trade_route": QComboBox(),
                 "port_departed": QComboBox(),
                 "port_destination": QComboBox(),
+                "armaments": QTextEdit(),
                 "sequence_of_events": QTextEdit(),
                 "historical_event": QTextEdit(),
+                "ship_documents": QTextEdit(),
                 "other_details": QTextEdit()
             },
             "registration": {
@@ -136,7 +136,6 @@ def input_dict():
             "wood_type": ("builds", "wood_id", "wood_types"),
             "fastening": ("builds", "fastening_id", "fastening"),
             "sheathing": ("builds", "sheathing_id", "sheathing"),
-            "armament": ("extras", "armaments", None),
             "ship_purpose": ("builds", "purpose_id", "purpose"),
             "ship_type": ("builds", "type_id", "type"), 
             "tonnage": ("extras", "tonnage", None),
@@ -148,14 +147,15 @@ def input_dict():
             "build_year": ("extras", "build_year", None),
             "builder": ("extras", "builder", None),
             "shipyard": ("extras", "shipyard", None),
-            "ship_documents": ("builds", "ship_docs", None),
             "other_details": ("builds", "ship_details", None),
             # wreck event tab
             "trade_route": ("voyage", "trade_route", "trade_routes"),
             "port_departed": ("voyage", "port_from", "ports"),
             "port_destination": ("voyage", "port_to", "ports"),
+            "armaments": ("extras", "armaments", None),
             "sequence_of_events": ("extras", "sequence_of_wreck", None),
             "historical_event": ("extras", "historical_event", None),
+            "ship_documents": ("builds", "ship_docs", None),
             "other_details": ("extras", "notes", None),
             # registration tab
             "nation": ("extras", "nation", "nations"),

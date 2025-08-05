@@ -208,3 +208,5 @@ CREATE TABLE nations (
 id INTEGER PRIMARY KEY,
 nation TEXT NOT NULL
 );
+
+

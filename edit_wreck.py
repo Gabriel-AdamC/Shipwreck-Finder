@@ -3,7 +3,8 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBo
 )
 from PyQt5.QtCore import pyqtSignal
 import sqlite3
-from helpers import update_id
+import helpers
+from dicts import boxes_dict, input_dict, sections
 
 class EditWreckWindow(QWidget):
     switch_signal = pyqtSignal(str, object)
@@ -13,6 +14,9 @@ class EditWreckWindow(QWidget):
         self.setWindowTitle("Edit Wrecks")
         self.main_layout = QVBoxLayout()
         self.setLayout(self.main_layout)
+
+        self.data_display = helpers.DataDisplayWidget()
+
         self.create_gui(data)
 
 
@@ -51,6 +55,10 @@ class EditWreckWindow(QWidget):
         
         ship.setCurrentIndex(0) # will set to the first available ship. If data was passed, it will be the desired ship
 
+        # set the variables for the first iteration
+        self.name = ship.currentText()
+        self.ids = helpers.update_id(self.name)
+
         ship_row.addWidget(ship)
         self.main_layout.addLayout(ship_row)
 
@@ -61,12 +69,22 @@ class EditWreckWindow(QWidget):
         self.info_sections = QTabWidget()
         self.main_layout.addWidget(self.info_sections)
 
+        self.main_layout.addWidget(self.data_display)
+
         self.display()
 
     
     def display(self):
-        """ Display The Current Data """
-        return
+        self.data_display.display(
+            name = self.name,
+            ids=self.ids,
+            sections_func=sections,
+            input_dict_func=input_dict,
+            boxes_dict_func=boxes_dict,
+            db_path="shipwrecks.db",
+            edit_callback=self.update,
+            what = "edit"
+        )
 
     
     def get_name(self, id):
@@ -77,14 +95,14 @@ class EditWreckWindow(QWidget):
         name = c.fetchone()
 
         if name:
-            untupled = name[0] # sqlite3 returns a tuple with fetchall
+            untupled = name[0] # sqlite3 returns a tuple with fetchone
         return untupled
     
 
     def update_info(self, new_name):
         """ Updates The Info To The Current Viewed Ship """
         self.name = new_name
-        self.ids = update_id(new_name)
+        self.ids = helpers.update_id(new_name)
 
         self.display()
         

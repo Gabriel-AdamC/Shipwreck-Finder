@@ -389,6 +389,11 @@ class DataEntryWindow(QWidget):
             if widget.currentText() != "":
                 value = widget.currentText()
                 return value
+
+        elif isinstance(widget, QTextEdit):
+            if widget.toPlainText() != "":
+                value = widget.toPlainText()
+                return value
             
 
     def get_id_by_name(self, value, lookup):
