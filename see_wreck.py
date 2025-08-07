@@ -33,7 +33,7 @@ class WreckInfoWindow(QWidget):
             self.ship.addItem(row[0])
 
         self.name = self.ship.currentText()
-        self.ids = ui.update_id(self.name)  # Creates a tuple of (ship_id, location_row_ID, build_id)
+        self.ids = update_id(self.name)  # Creates a tuple of (ship_id, location_row_ID, build_id)
 
         self.ship.currentTextChanged.connect(self.update_ship_info)
 

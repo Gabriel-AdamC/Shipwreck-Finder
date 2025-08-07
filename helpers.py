@@ -1,4 +1,5 @@
 import sqlite3
+from PyQt5.QtWidgets import QLineEdit, QTextEdit, QComboBox
 
 
 def location_change(
@@ -270,3 +271,58 @@ def update_id(ship):
     return ids
 
 
+def get_widget_value(widget, key):
+        if isinstance(widget, QLineEdit):
+            if widget.text() != "":
+                value = widget.text()
+                return value
+
+        elif isinstance(widget, QComboBox):
+            if widget.currentText() != "":
+                value = widget.currentText()
+                return value
+
+        elif isinstance(widget, QTextEdit):
+            if widget.toPlainText() != "":
+                value = widget.toPlainText()
+                return value
+            
+
+def get_id_by_name(value, lookup):
+        conn = sqlite3.connect("shipwrecks.db")
+        c = conn.cursor()
+        c.execute(f"SELECT * FROM {lookup}")
+        data = c.fetchall()
+        for row in data:
+            if value in row:
+                for field in row:
+                    if isinstance(field, int):
+                        conn.close()
+                        return field 
+
+
+def link_im_cap(id, image=None, caption=None):
+        """ Links The Images To The Captions And Returns A Tuple of (image_path, caption) """
+        image_data = []
+
+        if image == None and caption == None:
+            conn = sqlite3.connect("shipwrecks.db")
+            c = conn.cursor()
+            c.execute("SELECT image_path FROM images WHERE ship_id = ?", (id,))
+            image_paths = c.fetchall()
+            c.execute("SELECT caption FROM images WHERE ship_id = ?", (id,))
+            captions = c.fetchall()
+            conn.close()
+        else:
+            image_paths = image
+            captions = caption
+
+        for i, image_path in enumerate(image_paths):
+            if i < len(captions):
+                caption = captions[i]
+            else: 
+                caption = "No Caption Available"
+
+            image_data.append((image_path, caption))
+        
+        return image_data

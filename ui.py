@@ -1,10 +1,13 @@
 import sqlite3
 import os
 from dicts import boxes_dict, input_dict, sections
-from PyQt5.QtWidgets import QLabel, QWidget, QComboBox, QLineEdit, QScrollArea,QTabWidget, QGridLayout, QVBoxLayout, QFormLayout, QPushButton, QApplication, QFrame, QHBoxLayout
+from PyQt5.QtWidgets import (
+    QLabel, QWidget, QComboBox, QLineEdit, QScrollArea,QTabWidget, QGridLayout, QVBoxLayout,
+    QFormLayout, QPushButton, QApplication, QFrame, QHBoxLayout, QDialog
+)
 from PyQt5.QtGui import QFont, QPixmap, QColor
 from PyQt5.QtCore import Qt, pyqtSignal
-from helpers import location_change, get_country_id_by_name, get_ocean_id_by_name
+from helpers import location_change, get_country_id_by_name, get_ocean_id_by_name, get_widget_value, get_id_by_name, link_im_cap
 
 class ClickableImageLabel(QLabel):
     """ Custom QLabel That Emits A Signal When Clicked """
@@ -117,6 +120,9 @@ class DataDisplayWidget(QWidget):
         self.sections = None
         self.combo_boxes = None
         self.db_path = None
+
+        self.deleted_images = []
+        self.selected_images = []
 
         
     def display(self, name, ids, sections_func, input_dict_func, boxes_dict_func, 
@@ -243,6 +249,11 @@ class DataDisplayWidget(QWidget):
                             if key in location_keys:
                                 setattr(self, location_keys[key], options)
 
+                            if key == "material":
+                                self.materials_input = widget
+                            if key == "wood_type":
+                                self.wood_types_input = widget
+
                             for item in options:
                                 untupled = item[0]
                                 if untupled == info:
@@ -270,6 +281,12 @@ class DataDisplayWidget(QWidget):
 
                         elif isinstance(widget, QLineEdit):
                             box.setText(info)
+
+                            if key == "caption": # set the names of these two for later use in update
+                                self.caption_input = widget
+                            elif key == "other_sources": 
+                                self.source_input = widget
+
                         else: # only other is TextEdit
                             box.setPlainText(info)
 
@@ -289,7 +306,7 @@ class DataDisplayWidget(QWidget):
             elif what == "edit":
                 update = QPushButton("Update Information")
                 self.buttons.addWidget(update)
-                update.clicked.connect(lambda: self.submit("update"))
+                update.clicked.connect(self.update)
 
             self.main_layout.addLayout(self.buttons)
 
@@ -331,7 +348,7 @@ class DataDisplayWidget(QWidget):
         """ Creates The Grid Of Images """
 
         columns = 3
-        image_data = self.link_im_cap()
+        image_data = link_im_cap(self.ids[0], None, None)
 
         for i, (image_path, caption) in enumerate(image_data):
             row = i // columns
@@ -395,29 +412,6 @@ class DataDisplayWidget(QWidget):
 
     def full_screen(self, image_path, caption):
         self.full_screen_viewer.show_image(image_path, caption)
-
-
-    def link_im_cap(self):
-        """ Links The Images To The Captions And Returns A Tuple of (image_path, caption) """
-        image_data = []
-
-        conn = sqlite3.connect(self.db_path)
-        c = conn.cursor()
-        c.execute("SELECT image_path FROM images WHERE ship_id = ?", (self.ids[0],))
-        image_paths = c.fetchall()
-        c.execute("SELECT caption FROM images WHERE ship_id = ?", (self.ids[0],))
-        captions = c.fetchall()
-        conn.close()
-
-        for i, image_path in enumerate(image_paths):
-            if i < len(captions):
-                caption = captions[i]
-            else: 
-                caption = "No Caption Available"
-
-            image_data.append((image_path, caption))
-        
-        return image_data
     
 
     def delete_record(self):
@@ -528,18 +522,17 @@ class DataDisplayWidget(QWidget):
         )
 
 
-    def submit(self, function, selected_images, image_labels):
+    def update(self):
         """ Handle the form submission by gathering non blank values """
         # dict to correlate form to db
         form_db = input_dict()
+        print("updating")
 
         # most tables need ship_id, so I need to do wrecks sooner than most tables,
         # but wrecks needs locations_row_ID and builds_id
         # so I need to do those first. Hence the order of the code below
  
         conn = None
-        self.selected_images = selected_images
-        self.image_labels = image_labels
 
         try:
             
@@ -560,11 +553,11 @@ class DataDisplayWidget(QWidget):
 
                     if key in form_db:
                         table, column, lookup = form_db[key][:3]
-                        value = self.get_widget_value(widget, key)
+                        value = get_widget_value(widget, key)
 
                         if value:
                             if lookup:
-                                value = self.get_id_by_name(value, lookup)
+                                value = get_id_by_name(value, lookup)
                             if table == "wrecks":
                                 wrecks[column] = value
                             elif table == "locations":
@@ -577,72 +570,87 @@ class DataDisplayWidget(QWidget):
                                 rest[table][column] = value
         
             if locations:
-                columns = ", ".join(locations.keys()) # creates a list of column names
-                placeholders = ", ".join(["?" for _ in locations]) # creates a list of ? to avoid sql injection
-                values = tuple(locations.values()) # creates a tuple of all the data
-                if function == "insert":
-                    query = f"INSERT INTO locations ({columns}) VALUES ({placeholders})"
-                    c.execute(query, values)
-                    location_row_ID = c.lastrowid
-                elif function == "update":
-                    set_clause = ", ".join([f"{col}=?" for col in locations.keys()])
-                    query = f"UPDATE locations SET {set_clause} WHERE location_row_ID = ?"
-                    c.execute(query, tuple(locations.values()) + (self.ids[1],))
-                
-                
+                set_clause = ", ".join([f"{col}=?" for col in locations.keys()])
+                query = f"UPDATE locations SET {set_clause} WHERE location_row_ID = ?"
+                c.execute(query, tuple(locations.values()) + (self.ids[1],))
 
-            if builds:
-                columns = ", ".join(builds.keys())
-                placeholders = ", ".join(["?" for _ in builds])
-                values = tuple(builds.values())
-                query = f"INSERT INTO builds ({columns}) VALUES ({placeholders})"
-                c.execute(query, values)
-                build_id = c.lastrowid
+            if builds: # TODO: idk if this works for ComboBoxes, works for locations though?
+                set_clause = ", ".join([f"{col}=?" for col in builds.keys()])
+                query = f"UPDATE builds SET {set_clause} WHERE build_id = ?"
+                c.execute(query, tuple(builds.values()) + (self.ids[2],))
 
             if wrecks:
-                build_id = build_id if build_id is not None else 0 # oceans always has to be inputted, but builds is optional
-                columns = ", ".join(wrecks.keys())
-                placeholders = ", ".join(["?" for _ in wrecks])
-                values = tuple(wrecks.values())
-                query = f"INSERT INTO wrecks ({columns}, build_id, location_row_ID) VALUES ({placeholders}, ?, ?)"
-                c.execute(query, values + (build_id, location_row_ID))
-                ship_id = c.lastrowid
+                set_clause = ", ".join([f"{col}=?" for col in wrecks.keys()])
+                query = f"UPDATE wrecks SET {set_clause} WHERE id = ?"
+                c.execute(query, tuple(wrecks.values()) + (self.ids[0],))
 
             if rest:
                 for table_name, table_data in rest.items():
                     if table_data:
                         if table_name == "images" and hasattr(self, "selected_images") and self.selected_images:
 
+                            # TODO: This may need to change when  I implement multiple captions and sources
                             current_caption = self.caption_input.text() if hasattr(self, "caption_input") else ""
                             current_source = self.source_input.text() if hasattr(self, "source_input") else "" 
-                    
-                            # Insert each image with all its metadata
+
+                            # Delete images
+                            for path in self.deleted_images:
+                                query = f"DELETE FROM images WHERE image_path = ?"
+                                c.execute(query, (path,))
+                                # delete the local copy
+                                if os.path.exists(path):
+                                    try:
+                                        os.remove(path)
+                                    except OSError as e:
+                                        print(f"Error: {e}")
+
                             for image_data in self.selected_images:
-                                query = "INSERT INTO images (image_path, caption, source, ship_id) VALUES (?, ?, ?, ?)"
-                                c.execute(query, (
-                                    image_data['image_path'],
-                                    current_caption,
-                                    current_source,
-                                    ship_id
-                                ))
-                    
+                                # Check if image already exists for this ship
+                                check_query = "SELECT id FROM images WHERE image_path = ?"
+                                c.execute(check_query, (image_data['image_path'],))
+                                existing_image = c.fetchone()
+
+                                if existing_image:
+                                    # Update existing image
+                                    query = "UPDATE images SET caption = ?, source = ? WHERE id = ?"
+                                    c.execute(query, (current_caption, current_source, existing_image[0]))
+                                else:
+                                    # Insert new image
+                                    query = "INSERT INTO images (image_path, caption, source, ship_id) VALUES (?, ?, ?, ?)"
+                                    c.execute(query, (
+                                        image_data['image_path'],
+                                        current_caption,
+                                        current_source,
+                                        self.ids[0]
+                                    ))
+                        
                             # Clear selected images after insertion
                             self.selected_images.clear()
+                            self.deleted_images.clear()
                             continue
+
+                        # Check if a record already exists
+                        check_query = f"SELECT COUNT(*) FROM {table_name} WHERE ship_id = ?"
+                        c.execute(check_query, (self.ids[0],))
+                        exists = c.fetchone()[0] > 0
 
                         columns = ", ".join(table_data.keys())
                         placeholders = ", ".join(["?" for _ in table_data])
                         values = tuple(table_data.values())
 
-                        query = f"INSERT INTO {table_name} ({columns}, ship_id) VALUES ({placeholders}, ?)"
-                        c.execute(query, values + (ship_id,))
+                        if exists:
+                            # Build UPDATE query
+                            set_clause = ", ".join([f"{col} = ?" for col in table_data.keys()])
+                            query = f"UPDATE {table_name} SET {set_clause} WHERE ship_id = ?"
+                            c.execute(query, tuple(table_data.values()) + (self.ids[0],))
+                        else:
+                            # INSERT new record
+                            query = f"INSERT INTO {table_name} ({columns}, ship_id) VALUES ({placeholders}, ?)"
+                            c.execute(query, values + (self.ids[0],))
 
             conn.commit()
         
-            # Clear form inputs after submission
-            self.reset_fields()
-            # send an alert to the user
-            self.submit_message()
+            # TODO: Send a message to the user
 
         except sqlite3.Error as e:
             if conn:
@@ -657,3 +665,14 @@ class DataDisplayWidget(QWidget):
         finally:
             if conn:
                 conn.close()
+
+    
+    def error(self, e):
+        dlg = QDialog()
+        message = f"Error: {e} \n Please Try again"
+        dlg.setWindowTitle("Error")
+        er_layout = QVBoxLayout()
+        er_layout.addWidget(message)
+        dlg.setLayout(er_layout)
+        dlg.exec_()
+        

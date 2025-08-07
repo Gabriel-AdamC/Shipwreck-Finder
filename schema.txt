@@ -75,7 +75,6 @@ id INTEGER PRIMARY KEY,
 ship_id INTEGER NOT NULL,
 image_path TEXT,
 caption TEXT,
-source TEXT,
 FOREIGN KEY (ship_id) REFERENCES wrecks(id)
 );
 
@@ -109,6 +108,7 @@ artefacts TEXT,
 year_salvaged TEXT,
 salvors TEXT,
 details TEXT,
+source TEXT,
 FOREIGN KEY (ship_id) REFERENCES wrecks(id),
 FOREIGN KEY (nation) REFERENCES nations (id)
 );

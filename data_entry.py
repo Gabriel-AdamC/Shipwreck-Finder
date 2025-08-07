@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import pyqtSignal, QDir, Qt
 from PyQt5.QtGui import QPixmap
 import sqlite3
-from helpers import location_change, get_country_id_by_name, get_ocean_id_by_name, change_height
+from helpers import location_change, get_country_id_by_name, get_ocean_id_by_name, change_height, get_widget_value, get_id_by_name, link_im_cap
 from dicts import sections, boxes_dict, input_dict
 from functools import partial
 
@@ -24,7 +24,7 @@ class DataEntryWindow(QWidget):
         self.setLayout(layout)
         self.entry_ui(layout)
         self.selected_images = []
-        self.image_labels = []
+        self.captions = []
 
     def entry_ui(self, layout):
         """ Set up the UI for data entry. """
@@ -122,11 +122,31 @@ class DataEntryWindow(QWidget):
                         widget.currentTextChanged.connect(lambda _, sk=source_key: self.hierarchy(sk))
 
                 elif isinstance(widget, QLineEdit):
-                    form.addRow(key.replace('_', ' ').capitalize(), widget)
-                    if key == "caption":
+                    if key != "caption":
+                        form.addRow(key.replace('_', ' ').capitalize(), widget)
+
+                    else: # when key is caption
+                        # add the row including a button to add a caption
                         self.caption_input = widget
-                    elif key == "other_sources": 
-                        self.source_input = widget
+                        cap_btn = QPushButton("Add Caption")
+
+                        text = QLabel(key)
+
+                        container = QWidget()
+                        caption_layout = QHBoxLayout(container)
+                        caption_layout.addWidget(text)
+                        caption_layout.addWidget(widget)
+                        caption_layout.addWidget(cap_btn)
+                        caption_layout.setContentsMargins(0, 0, 0, 0)
+
+                        form.addRow(container)
+
+                        # add a label for all the captions the user has added
+                        self.captions_given = QLabel()
+                        self.captions_given.setWordWrap(True)
+                        form.addRow("Captions", self.captions_given)
+                        
+                        cap_btn.clicked.connect(self.add_cap)
 
                 elif isinstance(widget, QTextEdit):
                     # i want the TextEdits to scale based on how much is inside of them
@@ -159,6 +179,26 @@ class DataEntryWindow(QWidget):
         layout.addWidget(submit)
 
         submit.clicked.connect(self.submit)
+
+    
+    def add_cap(self):
+        """ Add The Caption To The Label """
+        caption = self.caption_input.text().strip()
+        self.captions.append(caption)
+
+        # create a string to put in the label
+        quotes = ""
+  
+        # check for the QLabel
+        if hasattr(self, "captions_given"):
+            # add the given caption by clearing the label and then adding all the captions in self.captions
+            self.captions_given.clear()
+            for cap in self.captions:
+                quotes += f"'{cap}', "
+            self.captions_given.setText(quotes)
+        
+        # clear the input
+        self.caption_input.clear()
 
 
     def update_wood(self, selected_material): # dynamically changes wood input table
@@ -195,27 +235,17 @@ class DataEntryWindow(QWidget):
         # copy the file
         shutil.copy2(filename, local_path)
 
-        caption = self.caption_input.text() if hasattr(self, 'caption_input') else ""
-        source = self.source_input.text() if hasattr(self, 'source_input') else ""
-    
-        # Store the complete image data for db insertion
-        image_data = {
-            'image_path': local_path,
-            'caption': caption,
-            'source': source
-        }
-
         # display the image onto the pixmap
+        # TODO: maybe set the pixmap first and then just add to the pixmap, that way they appear side by side
         pixmap = QPixmap()
         pixmap.load(local_path)
         label = QLabel()
         label.setPixmap(pixmap.scaled(200, 200, aspectRatioMode=1))
         self.sources_tab_layout.addWidget(label)
-        self.image_labels.append(label)
     
         if not hasattr(self, 'selected_images'):
             self.selected_images = []
-        self.selected_images.append(image_data)
+        self.selected_images.append(local_path)
 
     
     def submit(self):
@@ -234,6 +264,7 @@ class DataEntryWindow(QWidget):
             conn = sqlite3.connect("shipwrecks.db")
             c = conn.cursor()
             
+            images_inserted = False
             wrecks = {}
             locations = {}
             builds = {}
@@ -248,11 +279,11 @@ class DataEntryWindow(QWidget):
 
                     if key in form_db:
                         table, column, lookup = form_db[key][:3]
-                        value = self.get_widget_value(widget, key)
+                        value = get_widget_value(widget, key)
 
                         if value:
                             if lookup:
-                                value = self.get_id_by_name(value, lookup)
+                                value = get_id_by_name(value, lookup)
                             if table == "wrecks":
                                 wrecks[column] = value
                             elif table == "locations":
@@ -263,6 +294,7 @@ class DataEntryWindow(QWidget):
                                 if table not in rest:
                                     rest[table] = {}
                                 rest[table][column] = value
+            print(rest)
         
             if locations:
                 columns = ", ".join(locations.keys()) # creates a list of column names
@@ -291,26 +323,28 @@ class DataEntryWindow(QWidget):
 
             if rest:
                 for table_name, table_data in rest.items():
-                    if table_data:
-                        if table_name == "images" and hasattr(self, "selected_images") and self.selected_images:
+                    # the images and captions dont technically hold info, so will not be added with rest.
+                    # So check if there is image data and if so, add the images
+                    if hasattr(self, "selected_images") and self.selected_images and images_inserted == False:
 
-                            current_caption = self.caption_input.text() if hasattr(self, "caption_input") else ""
-                            current_source = self.source_input.text() if hasattr(self, "source_input") else "" 
-                    
+                            images = link_im_cap(ship_id, self.selected_images, self.captions)
+                            # images is list of tuples (image_path, caption)
+
                             # Insert each image with all its metadata
-                            for image_data in self.selected_images:
-                                query = "INSERT INTO images (image_path, caption, source, ship_id) VALUES (?, ?, ?, ?)"
+                            for image in images:
+                                print(image)
+                                query = "INSERT INTO images (image_path, caption, ship_id) VALUES (?, ?, ?)"
                                 c.execute(query, (
-                                    image_data['image_path'],
-                                    current_caption,
-                                    current_source,
+                                    image[0],
+                                    image[1],
                                     ship_id
                                 ))
                     
                             # Clear selected images after insertion
                             self.selected_images.clear()
-                            continue
-
+                            images_inserted = True # prevent images being added twice
+                    
+                    if table_data:
                         columns = ", ".join(table_data.keys())
                         placeholders = ", ".join(["?" for _ in table_data])
                         values = tuple(table_data.values())
@@ -368,43 +402,13 @@ class DataEntryWindow(QWidget):
         """" resets all the inputs in the form"""
         for section_name, fields in self.sections.items():
             for key, widget in fields.items():
-                if isinstance(widget, QLineEdit):
+                if isinstance(widget, QLineEdit) or isinstance(widget, QTextEdit):
                     widget.clear()
                 elif isinstance(widget, QComboBox):
                     widget.setCurrentIndex(0)
         for label in getattr(self, "image_labels", []):
             label.deleteLater()
         self.image_labels = []
-
-
-    def get_widget_value(self, widget, key):
-        if isinstance(widget, QLineEdit):
-            if widget.text() != "":
-                value = widget.text()
-                return value
-
-        elif isinstance(widget, QComboBox):
-            if widget.currentText() != "":
-                value = widget.currentText()
-                return value
-
-        elif isinstance(widget, QTextEdit):
-            if widget.toPlainText() != "":
-                value = widget.toPlainText()
-                return value
-            
-
-    def get_id_by_name(self, value, lookup):
-        conn = sqlite3.connect("shipwrecks.db")
-        c = conn.cursor()
-        c.execute(f"SELECT * FROM {lookup}")
-        data = c.fetchall()
-        for row in data:
-            if value in row:
-                for field in row:
-                    if isinstance(field, int):
-                        conn.close()
-                        return field 
 
     
     def hierarchy(self, source):

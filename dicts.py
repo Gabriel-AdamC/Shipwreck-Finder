@@ -182,7 +182,7 @@ def input_dict():
             # sources tab
             "images": ("images", "image_path", None),
             "caption": ("images", "caption", None),
-            "other_sources": ("images", "source", None)
+            "other_sources": ("extras", "source", None)
         }
     
     return form_db
