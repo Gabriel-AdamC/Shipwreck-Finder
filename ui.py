@@ -3,7 +3,7 @@ import os
 from dicts import boxes_dict, input_dict, sections
 from PyQt5.QtWidgets import (
     QLabel, QWidget, QComboBox, QLineEdit, QScrollArea,QTabWidget, QGridLayout, QVBoxLayout,
-    QFormLayout, QPushButton, QApplication, QFrame, QHBoxLayout, QDialog
+    QFormLayout, QPushButton, QApplication, QFrame, QHBoxLayout, QDialog, QDialogButtonBox
 )
 from PyQt5.QtGui import QFont, QPixmap, QColor
 from PyQt5.QtCore import Qt, pyqtSignal
@@ -13,8 +13,8 @@ class ClickableImageLabel(QLabel):
     """ Custom QLabel That Emits A Signal When Clicked """
     clicked = pyqtSignal(str, str)  # image_path and caption
 
-    def __init__(self, image_path, caption):
-        super().__init__()
+    def __init__(self, image_path, caption, parent=None):
+        super().__init__(parent)
         self.image_path = image_path
         self.caption = caption
         self.setCursor(Qt.PointingHandCursor)
@@ -102,6 +102,7 @@ class FullScreenViewer(QWidget):
 
 class DataDisplayWidget(QWidget):
     """ Reusable widget for displaying tabbed data with images """
+    switch_signal = pyqtSignal(str, object)
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -121,8 +122,13 @@ class DataDisplayWidget(QWidget):
         self.combo_boxes = None
         self.db_path = None
 
+        # what is a variable that will show where the user came from and what they want to do.
+        # show edit stuff when they are on the edit page and so on
+        self.what = None
+
         self.deleted_images = []
         self.selected_images = []
+        self.captions = []
 
         
     def display(self, name, ids, sections_func, input_dict_func, boxes_dict_func, 
@@ -140,6 +146,9 @@ class DataDisplayWidget(QWidget):
             edit_callback: Function to call when edit button is clicked
             delete_callback: Function to call when delete button is clicked
         """
+
+        # remember what the user wants to do
+        self.what = what
 
         # Handle hierarchy
         location_keys = {
@@ -303,10 +312,14 @@ class DataDisplayWidget(QWidget):
                 self.buttons.addWidget(edit)
                 edit.clicked.connect(lambda: edit_callback(self.name, self.ids))
 
+                delete = QPushButton("Delete This Wreck")
+                self.buttons.addWidget(delete)
+                delete.clicked.connect(lambda: self.handle_delete(self.parent().switch_signal))
+
             elif what == "edit":
                 update = QPushButton("Update Information")
                 self.buttons.addWidget(update)
-                update.clicked.connect(self.update)
+                update.clicked.connect(lambda: self.handle_update(self.parent().switch_signal))
 
             self.main_layout.addLayout(self.buttons)
 
@@ -347,10 +360,10 @@ class DataDisplayWidget(QWidget):
     def create_grid(self, grid_layout):
         """ Creates The Grid Of Images """
 
-        columns = 3
+        columns = 3 # 3 just looks nice
         image_data = link_im_cap(self.ids[0], None, None)
 
-        for i, (image_path, caption) in enumerate(image_data):
+        for i, (image_path, caption) in enumerate(image_data): 
             row = i // columns
             col = i % columns
 
@@ -376,6 +389,12 @@ class DataDisplayWidget(QWidget):
 
             image_label = ClickableImageLabel(actual_path, actual_caption)
 
+            # set up the widgets needed for deletion and updating
+            if self.what == "edit":
+                delete_button = QPushButton("Delete This Image")
+                delete_button.clicked.connect(lambda checked=False, btn=delete_button, path=actual_path: (btn.setDisabled(True), self.del_im(path)))
+                frame_layout.addWidget(delete_button)
+
             # load and scale the image
             pixmap = QPixmap(120, 90)
             pixmap.fill(QColor(200, 200, 200))
@@ -390,7 +409,7 @@ class DataDisplayWidget(QWidget):
             image_label.setScaledContents(True)
 
             image_label.clicked.connect(self.full_screen)
-
+                
             # set the captions
             caption_label = QLabel(actual_caption)
             caption_label.setWordWrap(True)
@@ -410,12 +429,67 @@ class DataDisplayWidget(QWidget):
             grid_layout.addWidget(frame, row, col)
 
 
+    def del_im(self, path):
+        """ Adds The Image To A List That Will Be Deleted Later """
+        if path:
+            if isinstance(path, tuple):
+                path = path[0]
+            self.deleted_images.append(path)
+
+
     def full_screen(self, image_path, caption):
         self.full_screen_viewer.show_image(image_path, caption)
+
+
+    def handle_delete(self, switch_signal=None):
+        success = self.delete_record()
+
+        if success:
+            # return user to map page and show them a success message
+            if switch_signal:
+                switch_signal.emit("map", None)
+            elif hasattr(self, 'switch_signal'):
+                self.switch_signal.emit("map", None)
+            self.success()
+        else:
+            return self.error("Unable to delete wreck")
+
+
+    def handle_update(self, switch_signal=None):
+        success = self.update()
+
+        # need to pass in a list of tuples
+        data = self.get_tuple(self.ids)
+
+        if success:
+            if switch_signal:
+                switch_signal.emit("see_wreck", data)
+            elif hasattr(self, 'switch_signal'):
+                self.switch_signal.emit("see_wreck", data)
+            self.success()
+        else:
+            return self.error("Unable to update wreck")
+
+
+    def get_tuple(self, ids):
+        """ Get A Tuple For See Wreck Page """
+        conn = sqlite3.connect("shipwrecks.db")
+        c = conn.cursor()
+        c.execute("SELECT name, y_coord, x_coord FROM wrecks WHERE id = ?", (ids[0],))
+        data = c.fetchall()
+        conn.close()
+        return data
     
 
     def delete_record(self):
         """ Deletes The Wreck From The Database Completely """
+
+        # check if the user is certain they want to delete
+        surety = self.r_u_sure()
+
+        if not surety:
+            return False
+        
         tables = ["wrecks", "builds", "locations", "voyage", "extras", "images"]
         confusing = ["wrecks", "builds", "locations"] # These will all have different queries
 
@@ -574,7 +648,7 @@ class DataDisplayWidget(QWidget):
                 query = f"UPDATE locations SET {set_clause} WHERE location_row_ID = ?"
                 c.execute(query, tuple(locations.values()) + (self.ids[1],))
 
-            if builds: # TODO: idk if this works for ComboBoxes, works for locations though?
+            if builds: 
                 set_clause = ", ".join([f"{col}=?" for col in builds.keys()])
                 query = f"UPDATE builds SET {set_clause} WHERE build_id = ?"
                 c.execute(query, tuple(builds.values()) + (self.ids[2],))
@@ -612,11 +686,11 @@ class DataDisplayWidget(QWidget):
 
                                 if existing_image:
                                     # Update existing image
-                                    query = "UPDATE images SET caption = ?, source = ? WHERE id = ?"
-                                    c.execute(query, (current_caption, current_source, existing_image[0]))
+                                    query = "UPDATE images SET caption = ?WHERE id = ?"
+                                    c.execute(query, (current_caption, existing_image[0]))
                                 else:
                                     # Insert new image
-                                    query = "INSERT INTO images (image_path, caption, source, ship_id) VALUES (?, ?, ?, ?)"
+                                    query = "INSERT INTO images (image_path, caption, ship_id) VALUES (?, ?, ?)"
                                     c.execute(query, (
                                         image_data['image_path'],
                                         current_caption,
@@ -649,8 +723,7 @@ class DataDisplayWidget(QWidget):
                             c.execute(query, values + (self.ids[0],))
 
             conn.commit()
-        
-            # TODO: Send a message to the user
+            return True
 
         except sqlite3.Error as e:
             if conn:
@@ -669,10 +742,47 @@ class DataDisplayWidget(QWidget):
     
     def error(self, e):
         dlg = QDialog()
-        message = f"Error: {e} \n Please Try again"
+        print(e)
+        text = f"Error: {e} \n Please Try again"
+        message = QLabel(text)
         dlg.setWindowTitle("Error")
         er_layout = QVBoxLayout()
+        print(message)
         er_layout.addWidget(message)
         dlg.setLayout(er_layout)
         dlg.exec_()
         
+
+    def r_u_sure(self):
+        """ Make Sure The User Wants To Delete A Record """
+        dlg = QDialog()
+        text = f"Are You Certain You Want To DELETE This Record?\nThis Cannot Be Undone."
+        msg = QLabel(text)
+        dlg.setWindowTitle("WARNING")
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(dlg.accept)
+        buttons.rejected.connect(dlg.reject)
+        dlg_layout = QVBoxLayout()
+        dlg_layout.addWidget(msg)
+        dlg_layout.addWidget(buttons)
+        dlg.setLayout(dlg_layout)
+        result = dlg.exec_()
+
+        return result == QDialog.Accepted 
+    
+
+    def success(self):
+        dlg = QDialog()
+        text = f"Success"
+        msg = QLabel(text)
+        dlg.setWindowTitle("Success")
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok)
+        buttons.accepted.connect(dlg.accept)
+
+        dlg_layout = QVBoxLayout()
+        dlg_layout.addWidget(msg)
+        dlg_layout.addWidget(buttons)
+        dlg.setLayout(dlg_layout)
+
+        dlg.exec_()

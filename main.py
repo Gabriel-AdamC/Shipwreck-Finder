@@ -6,20 +6,12 @@ from edit_wreck import EditWreckWindow
 
 # TODO: images are missing, especially newest ship image test 1
     # I think it only adds image to db if there is also a caption?
-    
-# TODO: transfer functions from see_wreck to helpers and make them useable in edit and delete.
-    # most of the functions should be in the helpers, maybe even new file for UI
 
 # TODO: if adding multiplewrecks in one setting, hierarchy does not correctly reset after each wreck is added to db
 
 # TODO: Add districts
 
 # TODO: filters are iffy, if just ocean it doesnt work properly, so maybe make country compulsory?
-
-# TODO: Need to make the caption to image more user friendly, and make it work.
-    # caption[0] goes to image[0] and so on
-        # need to make the data entry caption work for multiple captions per entry (currently at 1 per entry)
-            # and currently the 1 caption gets set to every image
 
 # TODO: Add a page gui for data editing, so that you can edit shipwrecks in the database
 # TODO: Add a page gui for data deletion, so that you can delete shipwrecks from the database
@@ -33,8 +25,6 @@ from edit_wreck import EditWreckWindow
 # TODO: Make it look nice
 
 # TODO: filters check for _ in name. so if I have "i" in name, "titanic", "ship" and anything with i show up
-
-# completed Today: 
 
 class MainWindow(QMainWindow):
     def __init__(self):
